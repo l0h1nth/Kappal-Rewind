@@ -34,5 +34,26 @@ Further reading: [Python CSV](https://docs.python.org/3.14/library/csv.html),
 [dictionaries](https://docs.python.org/3.14/tutorial/datastructures.html#dictionaries),
 [dataclasses](https://docs.python.org/3.14/library/dataclasses.html),
 [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/).
-Before Phase 3, study monotonic versus wall-clock time, per-connection state and
-[WebSocket lifecycle](https://fastapi.tiangolo.com/advanced/websockets/). No replay code exists yet.
+## Phase 3 — replay
+
+| Concept / code | How it works here | Interview question |
+| --- | --- | --- |
+| HTTP vs WebSocket / `stream_replay` | Health/meta use request/response HTTP. `/ws/replay` stays open for commands and state frames in both directions; Nginx forwards the upgrade. | Why choose WebSockets over SSE plus separate command requests? |
+| `async` / `await` | One coroutine per connection waits for messages with a timeout while playing. Awaiting I/O lets other clients run. Sends and commands stay ordered; bounded waits clean up on disconnect. | Why can blocking `sleep` freeze other clients? |
+| Monotonic vs wall-clock / `_current_position` | Elapsed duration comes from a clock that does not jump with wall-clock corrections. Dataset UTC timestamps label recorded observations only. | Why must the recording timestamp not drive elapsed playback time? |
+| Speed / `ReplaySession.command` | Position = anchor position + elapsed × speed. Changing speed captures progress before re-anchoring. Pause stores the fraction; resume restarts elapsed measurement. | At second 3.75, why must pause not store just 3? |
+| Session state | Position, anchor, speed and playing belong to each connection; validated observations are shared without modification. | Why must two clients not share a replay clock? |
+| Seek / `build_frame` | Seek changes the anchor; every frame looks up exact observations again. No mutable trail cache survives a backward seek. | How could a rolling buffer accidentally show future points? |
+| Trails | Use seconds `max(0,s−59)` through `s` inclusive. Missing samples end a segment; absent current observations omit the vessel. | At 600, why does the window begin at 541, not 540? |
+
+Study `backend/app/replay.py` for the clock/frames, `replay_socket.py` for the ordered
+async loop, and `tests/test_replay*.py` for fake-clock and ASGI examples. Example:
+play at 1× for 3.75 s → pause at fractional 3.75 → resume for 0.25 s → displayed
+second 4. `docs/PROTOCOL.md` defines exact messages; `scripts/verify_websocket.py`
+exercises real Docker/Nginx communication. The React page does not yet consume replay.
+
+Further reading: [monotonic time](https://docs.python.org/3.14/library/time.html#time.monotonic),
+[async waits/cancellation](https://docs.python.org/3.14/library/asyncio-task.html),
+[FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/),
+[Nginx upgrades](https://nginx.org/en/docs/http/websocket.html).
+Next study React effect cleanup, WebSocket lifecycle in the browser and Leaflet layers.

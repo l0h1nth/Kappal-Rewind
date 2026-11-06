@@ -15,13 +15,14 @@
 - **Tradeoff:** audit and runtime share schema/time parsing; independent fixture/source
   assertions are needed to catch shared mistakes. Runtime policy is recorded below.
 
-## Planned replay ownership (not implemented)
-- **Decision:** one in-memory dataset and a replay clock per WebSocket connection;
-  React renders frames. Leaflet/React Leaflet will handle mapping.
-- **Reason:** independent clients and a clear source of playback truth, without a database.
-- **Alternative considered:** send the entire log and run the replay only in the browser.
-- **Tradeoff:** server must manage connection lifecycle, seek races and paused clients.
-  Protocol and timing behavior will be specified/tested before implementation.
+## Backend clock and independent WebSocket sessions
+- **Decision:** each connection owns a monotonic replay clock over the shared validated
+  dataset. Play/pause/speed changes re-anchor fractional progress; frames reflect server time.
+- **Reason:** bidirectional WebSocket commands/state and independent clients keep browser
+  rendering simple and avoid one user's pause/seek changing another's session.
+- **Alternative considered:** browser-only clocks, a global clock, or SSE plus HTTP commands.
+- **Tradeoff:** connection lifecycle is server work; sessions reset on reconnect. A single
+  async loop serializes commands and sends, with bounded waits instead of background writers.
 
 ## Small foundation with locked dependencies
 - **Decision:** pin Python dependencies including transitive versions and use npm's
@@ -29,7 +30,7 @@
 - **Reason:** reproducible dependency installs without unused code or services.
 - **Alternative considered:** floating latest application dependencies or full map scaffold now.
 - **Tradeoff:** lock updates are deliberate; base image tags still receive upstream
-  updates (not digest-pinned). This foundation proves HTTP wiring, not WebSocket support.
+  updates (not digest-pinned). WebSocket transport is added explicitly when used.
 
 ## Normalize once at startup; reject invalid input
 - **Decision:** load a typed dataset in FastAPI lifespan; preserve original bytes,
@@ -55,4 +56,15 @@
   inclusive missing intervals across the full recording window without interpolation.
 - **Reason:** stale coordinates must not be presented as observed current positions.
 - **Alternative considered:** forward-fill gaps or infer the missing T012 identity.
-- **Tradeoff:** fewer visible vessels during gaps; future replay/UI must handle absence.
+- **Tradeoff:** fewer visible vessels during gaps. Replay omits absent vessels entirely;
+  trails use seconds [max(0,s−59),s], splitting segments at missing samples. The future
+  UI must replace current markers from each complete frame.
+
+## Snapshot scheduling and deterministic reconstruction
+- **Decision:** check playing sessions every 100 ms; send only changed states, plus
+  immediate command responses. Rebuild at most 60 observed samples per vessel per frame.
+- **Reason:** 10× remains usable without queuing every missed second; seek needs no cache invalidation.
+- **Alternative considered:** increment-after-sleep clocks, a sender task per command,
+  or mutable rolling trail buffers.
+- **Tradeoff:** scheduling can skip intermediate seconds under load; clock accuracy
+  does not depend on send cadence. A send stalled for five seconds closes the session.

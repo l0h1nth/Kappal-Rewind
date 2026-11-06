@@ -1,15 +1,20 @@
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import monotonic
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 
 from app.ingestion import load_dataset
+from app.replay_socket import stream_replay
 
 DEFAULT_CSV = Path(__file__).resolve().parents[2] / "data/tracks.csv"
 
 
-def create_app(dataset_path: Path | None = None) -> FastAPI:
+def create_app(
+    dataset_path: Path | None = None, *, replay_clock: Callable[[], float] = monotonic,
+) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         path = dataset_path if dataset_path is not None else Path(os.environ.get("TRACKS_CSV", DEFAULT_CSV))
@@ -34,6 +39,10 @@ def create_app(dataset_path: Path | None = None) -> FastAPI:
             "record_count": dataset.record_count,
             "bounds": dataset.bounds,
         }
+
+    @application.websocket("/ws/replay")
+    async def replay(websocket: WebSocket):
+        await stream_replay(websocket, websocket.app.state.dataset, replay_clock)
 
     return application
 

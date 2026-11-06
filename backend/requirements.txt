@@ -36,3 +36,5 @@ typing-inspection==0.4.5
     #   pydantic
 uvicorn==0.54.0
     # via -r backend/requirements.in
+websockets==17.4
+    # via -r backend/requirements.in

@@ -2,12 +2,13 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: Phase 2** — validated in-memory ingestion, metadata/health endpoints,
-read-only audit and React foundation. Map, WebSocket replay and playback are pending.
+**Status: Phase 3** — validated ingestion and server-controlled WebSocket replay
+with play/pause/seek/reset, 1×/2×/5×/10× speeds and gap-split 60-second trails.
+React remains a foundation page; map, visual timeline and vessel sidebar are pending.
 See the six-phase [implementation plan](PLAN.md).
 
 **Stack:** React, TypeScript, Vite · Python, FastAPI · Nginx, Docker Compose · Pytest.
-Leaflet/React Leaflet and WebSockets are planned; they are not installed/implemented yet.
+WebSocket transport uses `websockets`; Leaflet/React Leaflet will be added with the map.
 
 ## Run
 Requires Docker Engine and Docker Compose v2; port 8080 must be free.
@@ -19,7 +20,8 @@ Open [localhost:8080](http://localhost:8080). The page should say “Backend con
 [Health endpoint](http://localhost:8080/api/health) returns `{"status":"ok"}` through
 Nginx. [Dataset metadata](http://localhost:8080/api/meta) reports counts/time/bounds.
 Stop with Ctrl+C, then `docker compose down`. After source changes, rebuild
-with `docker compose up --build`. The source CSV is mounted read-only.
+with `docker compose up --build`. CSV is mounted read-only. Replay connects at
+`ws://localhost:8080/ws/replay`; exact commands/frames: [protocol](docs/PROTOCOL.md).
 
 For development/tests (Python 3.14, Node 24+, npm):
 ```sh
@@ -29,9 +31,10 @@ python3.14 -m venv .venv
 (cd backend && python -m pytest -q)
 python3 scripts/audit_csv.py
 (cd frontend && npm ci && npm run build)
+python scripts/verify_websocket.py  # requires Compose running
 ```
 Run `uvicorn app.main:app --reload` from `backend` with the venv activated, and
-`npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` to :8000.
+`npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` and `/ws` to :8000.
 
 ## Data problems found
 35,820 rows become 35,780 validated observations across 20 vessels / 1,800 seconds.
@@ -48,7 +51,7 @@ windows/deltas, and decimate older paths for display. Measure parsing, wire size
 and browser rendering before adding workers or changing the rendering approach.
 
 ## AI and web resources
-Codex generated the foundation, ingestion, tests and docs; independent AI reviewers check
+Codex generated ingestion/replay, tests and docs; independent AI reviewers check
 critical work. Official FastAPI, Vite, Docker and Codex documentation informed setup;
 Praman's documentation inspired concise chronological logs. Human verification
 is not claimed. Contributions and actual checks: [AI usage](docs/AI_USAGE.md),

@@ -40,3 +40,21 @@ this file records contributions and reviewer scope.
 - Codex executed final rebuild/start, audit/count reconciliation, source-byte comparison,
   health/meta requests, updated skill validation and whitespace checks. No commits or
   pushes performed in this phase; frontend and its labeled foundation screenshot unchanged.
+
+## Phase 3 — 6 Nov 2026
+- Codex implemented the replay clock/frames, socket loop, proxy/transport setup,
+  fake-clock/ASGI tests and real-network smoke script; updated concise protocol and teaching docs.
+- Consulted official [FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/),
+  [Nginx upgrades](https://nginx.org/en/docs/http/websocket.html),
+  [asyncio waits](https://docs.python.org/3.14/library/asyncio-task.html) and
+  [monotonic time](https://docs.python.org/3.14/library/time.html#time.monotonic).
+- Independent replay_reviewer followed project instructions through a session subagent,
+  inspected clock/trail/protocol/cleanup behavior, ran 115 tests, and separately
+  exercised 1,000 invalid messages during playback; no actionable findings. It did
+  not repeat Docker/network tests or prolonged idle/browser rendering checks.
+- Codex ran actual Docker/Nginx WebSocket and HTTP checks, the complete tests and
+  frontend build; screenshot/UI unchanged. No commits or pushes in this phase.
+- Independent release_reviewer ran tests with the absolute venv interpreter,
+  frontend build, actual network smoke/reconnect and HTTP/config/source/audit checks;
+  found no actionable issues. It did not rebuild Docker, exercise prolonged idle/load,
+  test browser replay rendering or revalidate the unchanged foundation screenshot.
