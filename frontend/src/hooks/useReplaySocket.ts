@@ -57,6 +57,16 @@ export function useReplaySocket() {
   useEffect(() => {
     let active = true;
     let socket: WebSocket | undefined;
+    let initialDeadline: number | undefined;
+    const fail = (message: string) => {
+      window.clearTimeout(initialDeadline);
+      clearPending();
+      frameRef.current = null;
+      setFrame(null);
+      setStatus('error');
+      setError(message);
+      socket?.close();
+    };
     clearPending();
     frameRef.current = null;
     setStatus('connecting');
@@ -64,11 +74,13 @@ export function useReplaySocket() {
     setError(null);
     // StrictMode's setup/cleanup probe cancels this before opening a duplicate connection.
     const timer = window.setTimeout(() => {
+      // Bound both the handshake and the wait for the first usable server state.
+      initialDeadline = window.setTimeout(() => fail('Replay connection timed out. Reconnect to try again.'), 8000);
       socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/replay`);
       socketRef.current = socket;
       socket.onopen = () => { if (active) setStatus('connected'); };
       socket.onmessage = event => {
-        if (!active) return;
+        if (!active || socket?.readyState !== WebSocket.OPEN) return;
         try {
           const message = parseReplayMessage(JSON.parse(event.data));
           if (message.type === 'error') {
@@ -76,6 +88,7 @@ export function useReplaySocket() {
             setError(message.message);
             return;
           }
+          window.clearTimeout(initialDeadline);
           const pending = pendingRef.current;
           if (pending?.kind === 'seek') {
             // Pause is a stream barrier: no future automatic frames can follow its response.
@@ -96,23 +109,17 @@ export function useReplaySocket() {
           setFrame(message); // Complete server snapshot, never a merge of old positions.
           setError(null);
         } catch {
-          clearPending();
-          frameRef.current = null;
-          setError('Invalid replay message received from server.');
-          setFrame(null);
+          fail('Invalid replay message received from server. Reconnect to start a new session.');
         }
       };
       socket.onerror = () => {
         if (active) {
-          clearPending();
-          setStatus('error');
-          setError('Replay connection failed. Reconnect to start a new paused session.');
-          frameRef.current = null;
-          setFrame(null);
+          fail('Replay connection failed. Reconnect to start a new paused session.');
         }
       };
       socket.onclose = () => {
         if (active) {
+          window.clearTimeout(initialDeadline);
           clearPending();
           socketRef.current = null;
           setStatus(previous => previous === 'error' ? 'error' : 'disconnected');
@@ -124,6 +131,7 @@ export function useReplaySocket() {
     return () => {
       active = false;
       window.clearTimeout(timer);
+      window.clearTimeout(initialDeadline);
       window.clearTimeout(deadlineRef.current);
       pendingRef.current = null;
       if (socket) {

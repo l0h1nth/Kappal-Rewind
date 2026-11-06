@@ -73,7 +73,8 @@ The moving sequence lies near T012's surrounding observations (lines 11993 and
   lookup returns an observation or `None`, including gaps and out-of-range times.
   Missing intervals include recording boundaries, with inclusive first/last times.
   T012 lacks 09:10:00–09:10:39; T015 lacks 09:20:00–09:22:59 IST. No synthetic
-  positions or carry-forward current coordinates. Replay/UI handling remains pending.
+  positions or carry-forward current coordinates. Replay omits absent current fixes,
+  splits trails at gaps and shows no current values in the selected-vessel panel.
 
 Phase 1 proposed keeping the first conflicting occurrence. Phase 2 supersedes
 that proposal with measured whole-interval continuity; it happens to select the

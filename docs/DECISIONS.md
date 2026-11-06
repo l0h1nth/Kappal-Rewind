@@ -95,3 +95,12 @@
   five-second command deadlines fail visibly and require a fresh session. Range/select
   stay focused using guarded aria-disabled while busy; native disabled is used when
   unavailable. The draft and deadline never advance recorded time.
+
+## Recover explicitly from unusable replay connections
+- **Decision:** malformed server frames terminate the session and expose manual
+  reconnect; allow eight seconds for connection plus first valid state, independently
+  of the existing command deadline.
+- **Reason:** clearing an invalid frame while retaining a paused connection left all
+  controls disabled with no recovery action. An open socket alone is not usable data.
+- **Tradeoff:** malformed frames require a fresh paused session rather than waiting
+  for a later unsolicited frame. Slow initialization can be retried explicitly.

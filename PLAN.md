@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope ends after Phase 5.
+Python/FastAPI and WebSockets. Current authorized scope ends after Phase 6.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -45,12 +45,19 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 5.
 - [x] Clicking a marker shows current ID, speed in knots and heading in degrees.
 - [x] Trail age, selected-vessel gaps and reconnect behavior are defined and verified through Nginx.
 
-## 6. Testing, documentation and final submission
+## 6. Engineering Review & Improvements
+- [x] Independently review ingestion, replay/WebSocket, React/Leaflet and proportional robustness/security.
+- [x] Reproduce confirmed P0/P1/P2 issues, add focused regressions and apply minimal fixes.
+- [x] Verify tests/build, relevant Docker/browser integration, source integrity and concise records.
+- [x] Record review outcomes, remaining limits and deferred improvements; stop before Phase 7.
+
+## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phase 5 is complete with independent replay/release review.
-Stop before Phase 6 final end-to-end verification, screenshot, README/repository
-cleanup and submission preparation.
+**Review gate:** Phase 6 engineering review is complete with no unresolved
+actionable findings. Stop here. Final end-to-end
+verification, screenshot, README/repository cleanup and submission preparation
+are reserved for Phase 7.

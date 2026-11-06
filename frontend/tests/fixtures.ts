@@ -16,7 +16,7 @@ export const initial: ReplayFrame = {
   timestamp: metadata.start, vessels: [vessel('T007', 13.082801, 80.358893, 0), vessel('T012', 13.055, 80.32, 90)],
 };
 
-export async function setup(page: Page, options: { metadataError?: boolean; tileError?: boolean; metadata?: Metadata; frame?: ReplayFrame; autoRespond?: boolean } = {}) {
+export async function setup(page: Page, options: { metadataError?: boolean; tileError?: boolean; metadata?: Metadata; frame?: ReplayFrame; autoRespond?: boolean; sendInitial?: boolean } = {}) {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/meta', route => route.fulfill({
@@ -48,14 +48,16 @@ export async function setup(page: Page, options: { metadataError?: boolean; tile
       state = { ...state, timestamp: new Date(Date.parse(metadata.start) + state.second * 1000).toISOString() };
       route.send(JSON.stringify(state));
     });
-    route.send(JSON.stringify(options.frame ?? initial));
+    if (options.sendInitial !== false) route.send(JSON.stringify(options.frame ?? initial));
   });
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  if (options.sendInitial === false) await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
+  else await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
   return { send: (frame: unknown) => {
       if (typeof frame === 'object' && frame !== null && 'type' in frame && frame.type === 'state') state = frame as ReplayFrame;
       socket.send(JSON.stringify(frame));
     },
+    sendRaw: (text: string) => socket.send(text),
     close: () => socket.close(), connections: () => connections, commands, errors };
 }
 

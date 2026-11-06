@@ -101,3 +101,23 @@ this file records contributions and reviewer scope.
   checks and visually inspected temporary captures; no actionable findings. It did
   not rebuild images or repeat the parent's real-tile UI checks. Prolonged idle/load,
   other browser engines and comprehensive tile-provider outages remain unverified.
+
+## Phase 6 — 6 Nov 2026
+- Codex reviewed existing source/tests/assignment, reproduced recovery failures,
+  added minimal hook fixes and browser regressions, corrected stale audit/scope
+  wording and kept final screenshot/README/submission work for Phase 7. No new
+  dependencies, backend/data policy changes, commits or pushes.
+- Independent data_reviewer reconciled every accepted observation and all 1,800
+  frames against raw source, including 2,108,050 trail points; no data defect.
+  Replay reviewer independently reproduced both recovery bugs, reran 17 browser
+  tests after fixes and separately verified a stalled CONNECTING socket and cleanup.
+- General reviewer followed release-reviewer instructions, checked Leaflet layout/
+  keyboard behavior at five viewport widths and proportional security source
+  handling. Security-audit guidance was used only for source review; no full audit,
+  dependency vulnerability scan or external security probing was performed.
+- Codex executed current tests/build, read-only audit/source comparison, Docker
+  rebuild/network checks and real-backend Firefox interactions with mocked tiles.
+  The 90-second paused/playing two-tab check passed through Nginx with one socket
+  each and no browser errors. General re-review independently reran 17 browser
+  tests, build/typecheck and whitespace checks; no unresolved findings. No new web
+  resources consulted and no human verification claimed.

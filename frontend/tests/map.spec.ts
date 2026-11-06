@@ -71,15 +71,10 @@ test('frames move markers, replace trails, preserve pan/zoom and remove missing 
   expect(server.errors).toEqual([]);
 });
 
-test('disconnect clears positions, reconnect starts fresh, malformed messages recover', async ({ page }) => {
+test('command errors preserve state; disconnect clears positions and reconnect starts fresh', async ({ page }) => {
   const server = await setup(page);
   server.send({ type: 'error', message: 'Replay command rejected' });
   await expect(page.getByRole('alert')).toHaveText('Replay command rejected');
-  await expect(page.locator('.vessel-marker')).toHaveCount(2);
-  server.send({ ...initial, vessels: [{ ...initial.vessels[0], lat: 400 }] });
-  await expect(page.getByRole('alert')).toContainText('Invalid replay message');
-  await expect(page.locator('.vessel-marker')).toHaveCount(0);
-  server.send(initial);
   await expect(page.locator('.vessel-marker')).toHaveCount(2);
   server.close();
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('disconnected');

@@ -2,9 +2,9 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: Phase 5** — interactive Leaflet map, directional markers, gap-split trails,
+**Status: Phase 6 reviewed** — interactive Leaflet map, directional markers, gap-split trails,
 server-controlled timeline, Play/Pause/Reset, 1×/2×/5×/10× speeds and current vessel
-details. Final verification/submission preparation remain for Phase 6. See the [plan](PLAN.md).
+details. Final verification/submission preparation remain for Phase 7. See the [plan](PLAN.md).
 
 **Stack:** React, TypeScript, Vite, Leaflet/React Leaflet · Python, FastAPI,
 WebSockets · Nginx, Docker Compose · Pytest, Playwright.
@@ -58,5 +58,5 @@ Praman's documentation inspired concise chronological logs. Human verification
 is not claimed. Contributions and actual checks: [AI usage](docs/AI_USAGE.md),
 [build log](docs/BUILD_LOG.md), [learning notes](docs/LEARNING_NOTES.md).
 
-Earlier application preview (Phase 4; final UI screenshot deferred to Phase 6):
+Earlier application preview (Phase 4; final UI screenshot deferred to Phase 7):
 ![Interactive map with recorded vessels](screenshots/map.png)

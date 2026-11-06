@@ -94,3 +94,21 @@ Practical bug: disabling the focused range/select during acknowledgement moved
 Firefox focus to the page, preventing the next key. Guarded aria-disabled preserves
 focus; delayed-ack tests use actual consecutive keyboard events. Study
 [playback tests](../frontend/tests/playback.spec.ts) alongside the handlers above.
+
+## Phase 6 — recovery edge cases
+
+Two P2 defects in [useReplaySocket](../frontend/src/hooks/useReplaySocket.ts) had the
+same visible result: disabled controls without Reconnect. A malformed paused frame
+cleared data but retained connected status; a socket that never delivered its first
+state had no deadline. The effect-local `fail` now clears data/pending work, sets
+error status and closes the socket. An independent eight-second initialization
+deadline ends only on valid state or cleanup; an error packet is not a usable state.
+[Recovery tests](../frontend/tests/recovery.spec.ts) failed before the fix and now
+cover invalid JSON/fields, pending-deadline cleanup, timeout and fresh reconnect.
+
+Interview questions: Why can a paused connection never recover by waiting for the
+next frame? Why must an error packet not cancel the first-state deadline?
+
+Deferred: protocol request IDs, automatic reconnect/session restoration, map
+clustering, storage/rendering optimizations and dependency changes without evidence.
+The current export's cleaning policy and server clock needed no changes.
