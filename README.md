@@ -2,13 +2,12 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: Phase 3** — validated ingestion and server-controlled WebSocket replay
-with play/pause/seek/reset, 1×/2×/5×/10× speeds and gap-split 60-second trails.
-React remains a foundation page; map, visual timeline and vessel sidebar are pending.
-See the six-phase [implementation plan](PLAN.md).
+**Status: Phase 4** — interactive Leaflet map with directional vessel markers,
+gap-split trails, selection and server-controlled Play/Pause. Timeline, speed controls
+and the vessel details sidebar remain for Phase 5. See the [plan](PLAN.md).
 
-**Stack:** React, TypeScript, Vite · Python, FastAPI · Nginx, Docker Compose · Pytest.
-WebSocket transport uses `websockets`; Leaflet/React Leaflet will be added with the map.
+**Stack:** React, TypeScript, Vite, Leaflet/React Leaflet · Python, FastAPI,
+WebSockets · Nginx, Docker Compose · Pytest, Playwright.
 
 ## Run
 Requires Docker Engine and Docker Compose v2; port 8080 must be free.
@@ -16,7 +15,7 @@ From this repository:
 ```sh
 docker compose up
 ```
-Open [localhost:8080](http://localhost:8080). The page should say “Backend connected”.
+Open [localhost:8080](http://localhost:8080). The map should load with a connected indicator and 20 initial markers.
 [Health endpoint](http://localhost:8080/api/health) returns `{"status":"ok"}` through
 Nginx. [Dataset metadata](http://localhost:8080/api/meta) reports counts/time/bounds.
 Stop with Ctrl+C, then `docker compose down`. After source changes, rebuild
@@ -32,9 +31,11 @@ python3.14 -m venv .venv
 python3 scripts/audit_csv.py
 (cd frontend && npm ci && npm run build)
 python scripts/verify_websocket.py  # requires Compose running
+(cd frontend && npx playwright install firefox && npm test)
 ```
 Run `uvicorn app.main:app --reload` from `backend` with the venv activated, and
-`npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` and `/ws` to :8000.
+`npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` and `/ws` to :8000. Browser tests mock frames/tiles; real Docker
+checks are recorded separately. OSM tiles require internet; zoom to separate nearby markers.
 
 ## Data problems found
 35,820 rows become 35,780 validated observations across 20 vessels / 1,800 seconds.
@@ -51,11 +52,11 @@ windows/deltas, and decimate older paths for display. Measure parsing, wire size
 and browser rendering before adding workers or changing the rendering approach.
 
 ## AI and web resources
-Codex generated ingestion/replay, tests and docs; independent AI reviewers check
+Codex generated ingestion/replay/map, tests and docs; independent AI reviewers check
 critical work. Official FastAPI, Vite, Docker and Codex documentation informed setup;
 Praman's documentation inspired concise chronological logs. Human verification
 is not claimed. Contributions and actual checks: [AI usage](docs/AI_USAGE.md),
 [build log](docs/BUILD_LOG.md), [learning notes](docs/LEARNING_NOTES.md).
 
-The screenshot below is the running foundation, not the completed replay tool.
-![Running foundation with backend connected](screenshots/foundation.png)
+Real application screenshot (Phase 4; Phase 5 controls pending):
+![Interactive map with recorded vessels](screenshots/map.png)

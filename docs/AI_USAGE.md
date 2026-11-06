@@ -58,3 +58,23 @@ this file records contributions and reviewer scope.
   frontend build, actual network smoke/reconnect and HTTP/config/source/audit checks;
   found no actionable issues. It did not rebuild Docker, exercise prolonged idle/load,
   test browser replay rendering or revalidate the unchanged foundation screenshot.
+
+## Phase 4 — 6 Nov 2026
+- Codex authored the typed socket hook, metadata loading, Leaflet layers, responsive
+  map UI, focused Playwright tests and documentation. Backend implementation unchanged.
+- Consulted official [React effects](https://react.dev/reference/react/useEffect),
+  [React Leaflet](https://react-leaflet.js.org/docs/api-map/),
+  [Leaflet 1.9](https://leafletjs.com/reference-1.9.4.html),
+  [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/) and
+  [Playwright mocking](https://playwright.dev/docs/mock#mock-websockets).
+- Independent replay_reviewer read the rendering/lifecycle code and ran the browser
+  suite/build; targeted re-review independently passed six tests after the keyboard
+  selection fix. It used mocked tiles/frames, not real data/network checks.
+- Codex-operated local Firefox verified actual Docker/Nginx, OSM tiles, real vessel
+  motion/pause and gap states, keyboard/click selection, responsive layout and actual
+  screenshots. Direct WebSocket seek commands were test instrumentation, not new UI.
+  Human verification is not claimed. No commits/pushes.
+- Release reviewer independently reran browser/backend tests, frontend build, real
+  WebSocket smoke and configuration/source checks; requested learning-note wording
+  corrections and visually verified final settled desktop/mobile screenshots. It
+  did not rebuild images or repeat real tile/motion or prolonged-load checks.

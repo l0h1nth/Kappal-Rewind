@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope ends after Phase 3.
+Python/FastAPI and WebSockets. Current authorized scope ends after Phase 4.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -33,9 +33,12 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 3.
 - [x] Independent replay/release reviews report no actionable findings; 115 backend tests and frontend build pass.
 
 ## 4. React application and Leaflet map
-- [ ] Install Leaflet/React Leaflet and center/fit the map to validated vessel coordinates.
-- [ ] Show current vessel markers and paths without joining gaps as observed movement.
-- [ ] Include tile attribution and follow provider usage policy.
+- [x] Install Leaflet/React Leaflet and initialize map bounds from actual metadata; preserve user pan/zoom across frames.
+- [x] Show keyed directional markers and separate server trail segments; omit absent current fixes and retain selection identity.
+- [x] Add cleaned-up ws/wss lifecycle, visible errors, explicit reconnect and server-driven Play/Pause; no frontend replay clock.
+- [x] Support pointer/keyboard selection and responsive layout without a final sidebar or timeline.
+- [x] Use official OSM tiles with visible attribution, normal cache/Referer and no prefetch.
+- [x] Verify six focused browser tests, 115 backend tests, frontend build, real Docker/browser tiles/motion/gaps and independent reviews.
 
 ## 5. Timeline, vessel details and integration
 - [ ] Play/pause/scrub match server clock, including backward seeks and stale-frame handling.
@@ -48,5 +51,5 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 3.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phase 3 is complete. Stop for review before Phase 4 React/Leaflet
-rendering. The visual timeline and selected-vessel sidebar also remain pending.
+**Review gate:** Phase 4 is complete. Stop for review before Phase 5 timeline,
+speed controls, scrubber and selected-vessel details sidebar.

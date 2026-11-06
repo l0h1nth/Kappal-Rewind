@@ -68,3 +68,16 @@
   or mutable rolling trail buffers.
 - **Tradeoff:** scheduling can skip intermediate seconds under load; clock accuracy
   does not depend on send cadence. A send stalled for five seconds closes the session.
+
+## Stable map, complete snapshots and explicit reconnect
+- **Decision:** mount one React Leaflet MapContainer with metadata bounds; update
+  keyed markers and one polyline per server segment. Keep selection by ID. Use
+  an inner rotated arrow so Leaflet retains its positioning transform.
+- **Reason:** user pan/zoom persists, gaps remove current markers, and backward
+  seeks replace trails without frontend timing/window calculations.
+- **Alternative considered:** recenter/recreate on every frame, accumulate positions,
+  auto-reconnect with an assumed restored session, or add a state-management library.
+- **Tradeoff:** reconnect is manual and starts a new paused session; disconnect clears
+  current fixes. Initial-fit markers may overlap; users can zoom or use keyboard
+  selection. OSM tiles use the official URL, visible attribution and browser cache/
+  Referer defaults; no prefetch/offline feature or tile proxy.

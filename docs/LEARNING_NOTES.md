@@ -2,7 +2,7 @@
 
 | Component | What/why; how it works here | Study / interview question |
 | --- | --- | --- |
-| [React](https://react.dev/learn) + TypeScript | React renders the page; state holds health status. TypeScript checks source types before building; JSON still needs runtime validation. An effect fetches health and cancels on cleanup. | State vs effect; why can a TypeScript cast not validate an API response? |
+| [React](https://react.dev/learn) + TypeScript | React renders the page; state holds metadata, the latest replay frame and selection. TypeScript checks source types before building; incoming JSON still needs runtime validation. Effects manage network lifecycle. | State vs effect; why can a TypeScript cast not validate an API response? |
 | [Vite](https://vite.dev/guide/) | Local dev server and production bundler. Compiles TSX and bundles assets into `dist`; dev `/api` proxy targets :8000. | Why is the development server unnecessary in the final image? |
 | [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/) + Uvicorn | FastAPI declares routes; Uvicorn runs the ASGI app on :8000. Startup validates data before serving; health retains its small liveness response. | What is the difference between the framework and its server? |
 | [Nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html) | Serves built HTML/JS/CSS and forwards `/api/health` to `backend:8000/api/health`. Browser sees only localhost:8080. | Why does `backend` resolve inside Docker but not in browser code? |
@@ -11,10 +11,9 @@
 | [Pytest](https://docs.pytest.org/en/stable/) | Health contract check plus audit tests using raw source and small error/gap fixtures. These do not prove browser or Docker behavior. | What distinct failure does each kind of check detect? |
 | [Codex agents](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents) and [skills](https://learn.chatgpt.com/docs/build-skills) | Standalone TOML reviewer instructions live in `.codex/agents`; discoverable workflows use `.agents/skills/*/SKILL.md`. Neither replaces executed evidence. | How does a reusable procedure differ from an independent reviewer? |
 
-Request flow: browser → Nginx :8080 → FastAPI :8000 → JSON response → React state.
-The frontend checks once at mount; reload to recheck. It times out after five seconds.
-FastAPI now loads the CSV once during lifespan startup; `/api/meta` summarizes
-the stored dataset. A validation failure prevents startup; health response stays unchanged.
+Metadata loads at mount with an eight-second timeout; replay frames arrive over
+WebSocket. FastAPI loads the CSV once during lifespan startup; a validation failure
+prevents startup, and the health response stays unchanged.
 
 ## Phase 2 — ingestion
 
@@ -50,10 +49,32 @@ Study `backend/app/replay.py` for the clock/frames, `replay_socket.py` for the o
 async loop, and `tests/test_replay*.py` for fake-clock and ASGI examples. Example:
 play at 1× for 3.75 s → pause at fractional 3.75 → resume for 0.25 s → displayed
 second 4. `docs/PROTOCOL.md` defines exact messages; `scripts/verify_websocket.py`
-exercises real Docker/Nginx communication. The React page does not yet consume replay.
+exercises real Docker/Nginx communication. At the end of Phase 3, the React page did not yet consume replay.
 
 Further reading: [monotonic time](https://docs.python.org/3.14/library/time.html#time.monotonic),
 [async waits/cancellation](https://docs.python.org/3.14/library/asyncio-task.html),
 [FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/),
 [Nginx upgrades](https://nginx.org/en/docs/http/websocket.html).
-Next study React effect cleanup, WebSocket lifecycle in the browser and Leaflet layers.
+React rendering and Leaflet integration are covered below.
+
+## Phase 4 — interactive map
+
+| Concept / source | How it works here | Interview question |
+| --- | --- | --- |
+| Rendering / `App.tsx` | React state stores metadata, the latest complete frame and selected ID. Props describe what each map layer should show. | Why replace a frame instead of merging absent vessels into old state? |
+| Effects / `useReplaySocket` | One effect opens a same-origin ws/wss socket, handles messages and cleans up handlers/socket. Deferred setup cancels StrictMode's probe; explicit reconnect clears old data and starts fresh. | How can an old socket handler overwrite a new session? |
+| MapContainer / `VesselMap` | Metadata bounds initialize a single map with explicit CSS height. Frames update children; map identity/view persists. | Why should fitBounds not run after every frame? |
+| Coordinates / `VesselMarker` | Positions and polyline points use `[latitude, longitude]`. An inner arrow rotates clockwise from north; the outer div's transform belongs to Leaflet. | What breaks if rotation replaces Leaflet's outer transform? |
+| Selection / `VesselMarker` | Stable IDs key markers and selection; click/Enter/Space select, and highlight persists when the vessel returns after a gap. | Why must selection identity be separate from the current observation? |
+| Polylines / `VesselTrails` | Each backend segment becomes a separate path. Styling highlights selection; no interpolation or replay window calculation occurs here. | Why does flattening segments create false recorded motion? |
+
+Flow: server frame → hook validation/state → App props → VesselMap → marker position
+and heading / separate trail polylines. Play/Pause send commands; only returned
+server frames change replay time. Errors are visible and disconnect removes current
+fixes. Study `frontend/tests/map.spec.ts`: synthetic frames and mocked tiles cover
+UI behavior without OSM traffic; real tile/network checks are separate evidence.
+
+Further reading: [React effects](https://react.dev/reference/react/useEffect),
+[React Leaflet MapContainer](https://react-leaflet.js.org/docs/api-map/),
+[Leaflet 1.9](https://leafletjs.com/reference-1.9.4.html),
+[OSM tile policy](https://operations.osmfoundation.org/policies/tiles/).
