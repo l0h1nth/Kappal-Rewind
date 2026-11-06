@@ -1,0 +1,16 @@
+:root { font-family: system-ui, sans-serif; color: #e9eee8; background: #0c242b; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { min-height: 100svh; max-width: 1200px; margin: auto; padding: 30px 6vw; display: flex; flex-direction: column; }
+header, footer { display: flex; justify-content: space-between; align-items: center; gap: 24px; font-size: 11px; letter-spacing: .15em; color: #a3b7b7; }
+header { padding-bottom: 24px; border-bottom: 1px solid #345057; }
+.wordmark { color: #c8df8d; font-size: 20px; font-weight: 700; }
+section { flex: 1; padding: 60px 0; }
+.eyebrow { color: #c8df8d; font-size: 12px; letter-spacing: .2em; }
+h1 { font-size: clamp(64px, 10vw, 116px); line-height: .98; font-weight: 500; letter-spacing: -.065em; margin: 28px 0; }
+h1 em { font-family: Georgia, serif; font-weight: 400; color: #c8df8d; }
+.tagline { font-size: 21px; color: #c7d5d5; }
+.status { display: inline-block; margin-top: 24px; border: 1px solid #6c8584; border-radius: 24px; padding: 10px 17px; font-size: 13px; }
+.note { color: #a3b7b7; line-height: 1.7; font-size: 14px; }
+footer { padding-top: 20px; border-top: 1px solid #345057; }
+@media (max-width: 480px) { header, footer { font-size: 9px; letter-spacing: .08em; } section { padding: 45px 0; } }

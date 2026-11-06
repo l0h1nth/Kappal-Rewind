@@ -1,0 +1,4 @@
+# Project agents inherit the parent session's model and permissions.
+# Standalone agent files are discovered under .codex/agents/.
+[agents]
+max_concurrent_threads_per_session = 3
