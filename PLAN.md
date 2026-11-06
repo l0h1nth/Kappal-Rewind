@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. The initial task stops before replay implementation.
+Python/FastAPI and WebSockets. Current authorized scope ends after Phase 2.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -20,10 +20,10 @@ Python/FastAPI and WebSockets. The initial task stops before replay implementati
 
 ## 2. CSV inspection, validation and ingestion
 - [x] Original CSV is byte-identical to the supplied source; reproducible audit records anomalies.
-- [ ] Explicitly choose and test timezone, duplicate, heading and invalid-value policies.
-- [ ] Ingestion produces ordered per-vessel data with gap metadata and reconciled row counts.
-- [x] Independent initial-audit review has no unresolved findings; repeat for ingestion.
-Initial audit belongs to this foundation task; runtime ingestion remains pending.
+- [x] Explicit timezone, whole-interval duplicate, heading and invalid-value policies implemented and tested.
+- [x] Ingestion produces ordered per-vessel data, exact lookups, inclusive gaps and reconciled counts; source unchanged.
+- [x] FastAPI loads once at startup; summary metadata and unchanged health work through Docker/Nginx.
+- [x] Independent data review/re-review reports no unresolved findings; 59 backend tests pass.
 
 ## 3. FastAPI replay engine and WebSockets
 - [ ] Document a small typed command/frame protocol and per-connection clock ownership.
@@ -46,5 +46,5 @@ Initial audit belongs to this foundation task; runtime ingestion remains pending
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** stop after the foundation and initial audit. Explain the result and
-wait for review before continuing phase 2 ingestion or phase 3 replay.
+**Review gate:** Phase 2 is complete. Stop for review before Phase 3 WebSockets
+and replay; map rendering and playback controls also remain pending.

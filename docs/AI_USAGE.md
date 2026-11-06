@@ -1,40 +1,42 @@
-# AI and resources — 6 November 2026
+# AI and resources
 
-| Tool/resource | Actual contribution | Verification |
-| --- | --- | --- |
-| Codex, this chat | Read request/assignment; authored foundation code, audit/tests, container setup, reviewer/skill definitions and docs. | Agent executed checks recorded in BUILD_LOG. User has not yet independently verified the work. |
-| Independent Codex data_reviewer | Read raw CSV and audit/tests, executed audit and tests; confirmed counts and found a fractional-second aggregation defect. | Parent added a regression test and fix; 10 tests then passed. No file edits by reviewer. |
-| [Official Codex custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents) | Confirmed standalone agent TOML fields and project configuration. | Parsed local TOML and checked required keys; native discovery not yet exercised in a new Codex session. |
-| Skill Creator and [official skills docs](https://learn.chatgpt.com/docs/build-skills) | Guided lightweight SKILL.md frontmatter and workflow design. | Bundled validator initially failed for absent PyYAML; isolated retry pending at this entry. |
-| [FastAPI first steps](https://fastapi.tiangolo.com/tutorial/first-steps/), [Vite guide](https://vite.dev/guide/), [Docker startup order](https://docs.docker.com/compose/how-tos/startup-order/), [Nginx WebSockets](https://nginx.org/en/docs/http/websocket.html) | Informed health route, build, readiness ordering and future proxy requirements. WebSockets not implemented. | Local tests/build passed; container/browser check pending at this entry. |
-| [Praman docs](https://github.com/Adwaith-R-Nair/Praman/tree/main/docs) | Read BUILD_LOG and DECISIONS via GitHub API/raw URLs; inspired concise chronology, evidence and decision tradeoffs. | No project content copied. Web fetch of directory failed before the API fallback. |
+Human verification is not claimed. Test outcomes and failures belong in BUILD_LOG;
+this file records contributions and reviewer scope.
 
-No claim of human-authored implementation or human verification. No commit, push,
-public repository, submission email, AI API integration, or external vessel data.
-Later validation and reviewer outcomes are appended below as they happen.
+## Phase 1 — 6 Nov 2026
+- Codex authored the foundation, audit/tests, container setup, agent/skill definitions
+  and documentation. Independent session subagents followed project data/release
+  instructions; their findings and fixes are preserved in the condensed build log.
+- Official [FastAPI](https://fastapi.tiangolo.com/tutorial/first-steps/),
+  [Vite](https://vite.dev/guide/), [Docker](https://docs.docker.com/compose/),
+  [Nginx](https://nginx.org/en/docs/http/websocket.html) and
+  [Codex agents/skills](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+  informed setup. Skill Creator guided frontmatter/workflows; isolated PyYAML
+  validated skills without adding an app dependency.
+- [Praman docs](https://github.com/Adwaith-R-Nair/Praman/tree/main/docs) inspired
+  chronology and evidence, without copied content. GitHub API/raw reads supplied
+  the reference after a failed browser fetch. Local bundled Playwright/Firefox
+  verified the actual Docker page/screenshot after the connected browser failed;
+  a temporary Playwright install in `/tmp` was unnecessary and not a project dependency.
+- Native custom-agent discovery was not verified; release reviewer did not independently
+  rebuild containers or launch a browser. No commits/pushes were made by Codex.
 
-## Verification update
-- All three skills passed the bundled validator using isolated `uv run --with pyyaml`.
-- Docker build/start, same-origin health, Nginx config, mounted dataset hash and local
-  Firefox browser checks succeeded; screenshot is from the actual Docker-served page.
-- Connected browser tool could not reach localhost; local bundled Playwright/Firefox
-  provided the successful fallback. An unnecessary temporary Playwright npm install
-  was made under `/tmp/kappal-browser` before finding the bundled library; it is not a
-  project dependency.
-- Data reviewer rechecked the fix and DATA_AUDIT, independently ran 10 tests with no
-  warnings and reported no further actionable findings. Human review is still pending.
-- The browser's unavailable/timeout states were tested with intercepted responses,
-  not by disrupting the backend container. Full replay behavior is unimplemented.
-
-## Release review update
-- Independent Codex release_reviewer read assignment/current implementation/docs,
-  ran tests, checked Docker health/Nginx/HTTP and visually inspected the screenshot.
-- Found and reproduced the README's venv interpreter `realpath` bug. Codex fixed
-  the command to activate the venv; parent and reviewer independently ran the
-  revised commands (10 tests passed, no warnings). Reviewer reported no remaining
-  actionable foundation findings.
-- Reviews used this session's subagents following the project TOML instructions;
-  native agent discovery in a fresh session is still unverified. The release reviewer
-  did not independently rebuild containers or launch a browser.
-- All verification so far was performed by AI-operated tools. Human verification
-  remains pending. No ingestion or replay implementation was generated.
+## Phase 2 — 6 Nov 2026
+- Codex investigated raw candidate sequences; authored shared parsing, ingestion,
+  in-memory indexes, startup/meta integration, tests and requested documentation cleanup.
+- Consulted [Python CSV](https://docs.python.org/3/library/csv.html),
+  [datetime](https://docs.python.org/3/library/datetime.html) and
+  [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/); reread Praman's
+  BUILD_LOG through its raw URL for concise chronological style.
+- Independent data_reviewer followed the existing TOML instructions through a session
+  subagent, ran tests and separate raw-CSV/geographic calculations, verified source
+  integrity, and found acceptance of invalid offset minutes. Codex fixed that defect
+  with regression tests. Data re-review independently passed 59 tests and confirmed
+  the final audit/decision records, with no remaining findings.
+- Release reviewer independently checked tests, raw audit, source/container hashes,
+  Compose configuration/running containers, health/meta, whitespace and documentation
+  against Git history. Corrected its startup-readiness wording comment. It inspected
+  rebuild evidence but did not rebuild independently or repeat browser checks.
+- Codex executed final rebuild/start, audit/count reconciliation, source-byte comparison,
+  health/meta requests, updated skill validation and whitespace checks. No commits or
+  pushes performed in this phase; frontend and its labeled foundation screenshot unchanged.

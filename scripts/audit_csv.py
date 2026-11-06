@@ -5,20 +5,13 @@ import csv
 import hashlib
 import json
 import math
+import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 
-IST = timezone(timedelta(hours=5, minutes=30))
-COLUMNS = ["track_id", "timestamp", "lat", "lon", "speed_knots", "heading"]
-
-
-def parse_timestamp(value: str) -> datetime:
-    """Assume IST for naive field-export times, then compare in UTC."""
-    parsed = datetime.fromisoformat(value)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=IST)
-    return parsed.astimezone(timezone.utc)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+from app.csv_format import COLUMNS, parse_timestamp
 
 
 def audit(path: Path) -> dict:
@@ -61,7 +54,7 @@ def audit(path: Path) -> dict:
             if previous is not None and timestamp < previous:
                 out_of_order += 1
             previous = timestamp
-        except ValueError:
+        except (ValueError, OverflowError):
             issues.append({"line": line, "field": "timestamp", "issue": "invalid"})
         for field, low, high in [
             ("lat", -90, 90), ("lon", -180, 180),

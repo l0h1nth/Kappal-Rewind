@@ -12,7 +12,8 @@
 - **Decision:** retain the exact CSV and a standard-library read-only audit command.
 - **Reason:** dataset problems must be reproducible before choosing cleanup rules.
 - **Alternative considered:** immediately rewrite duplicate IDs based on trajectory.
-- **Tradeoff:** ambiguity remains visible; deterministic ingestion policy needs review.
+- **Tradeoff:** audit and runtime share schema/time parsing; independent fixture/source
+  assertions are needed to catch shared mistakes. Runtime policy is recorded below.
 
 ## Planned replay ownership (not implemented)
 - **Decision:** one in-memory dataset and a replay clock per WebSocket connection;
@@ -29,3 +30,29 @@
 - **Alternative considered:** floating latest application dependencies or full map scaffold now.
 - **Tradeoff:** lock updates are deliberate; base image tags still receive upstream
   updates (not digest-pinned). This foundation proves HTTP wiring, not WebSocket support.
+
+## Normalize once at startup; reject invalid input
+- **Decision:** load a typed dataset in FastAPI lifespan; preserve original bytes,
+  normalize naive IST timestamps to UTC and 360° to 0°, sort/index by vessel/time.
+  Invalid rows fail startup with line evidence; `/api/meta` exposes only summary data.
+- **Reason:** replay can reuse validated exact lookups without repeated parsing.
+- **Alternative considered:** silently skip invalid rows or load on each request.
+- **Tradeoff:** one invalid row prevents startup; input must be corrected explicitly.
+
+## Resolve conflicts by complete anchored continuity
+- **Decision:** remove normalized exact copies; choose the shortest complete
+  geographic path through each contiguous conflict block and both adjacent anchors.
+  Abort without anchors or when the best two paths differ by ≤1 m. Report every discard.
+- **Reason:** T007's stationary sequence matches both neighbors; the alternate
+  requires kilometre jumps in a second. Whole-sequence scoring avoids greedy flips.
+- **Alternative considered:** first-row wins, per-second nearest choice, or T012 reassignment.
+- **Tradeoff:** two best partial paths per candidate add small local complexity;
+  distance favors short travel and cannot establish identity. Conservative rejection
+  handles ambiguity; no generic sensor-motion model is claimed.
+
+## No current observation means no current position
+- **Decision:** exact timestamp lookup returns `None` for missing positions; record
+  inclusive missing intervals across the full recording window without interpolation.
+- **Reason:** stale coordinates must not be presented as observed current positions.
+- **Alternative considered:** forward-fill gaps or infer the missing T012 identity.
+- **Tradeoff:** fewer visible vessels during gaps; future replay/UI must handle absence.

@@ -1,51 +1,25 @@
 # Build log
 
-Append dated entries; correct earlier findings in later entries rather than
-rewriting recorded results. Dates/times use IST.
+Entries use actual IST dates and 4–7 evidence-based bullets per phase.
+The foundation log was condensed once for readability during Phase 2; its original
+version remains in Git history (`bc23f51`). Earlier results are unchanged.
 
-## 6 November 2026 — assignment and source inspection
-- Objective: understand the private two-page assignment and stop at the requested foundation.
-- Read the pasted user request and both PDF pages with `pdftotext -layout`; recorded final requirements in PLAN.md.
-- Inspected raw CSV with independent standard-library grouping and expected-second comparison.
-- Found 35,820 rows, 20 IDs, 40 conflicting duplicate keys, 220 missing vessel-seconds and mixed timestamps.
-- Recorded exact source evidence, timezone assumption and proposed policies in DATA_AUDIT; no normalization applied.
-- Read official FastAPI/Vite/Compose/Nginx and Codex custom-agent docs; fetched Praman BUILD_LOG/DECISIONS for documentation philosophy.
-- Problem: browser fetch of the Praman directory failed; GitHub API/raw-file reads succeeded instead.
-- `git status --short` initially failed because the folder was empty and not a Git repository; initialized `main` without a commit.
-- Next: build a minimal same-origin skeleton; reserve ingestion and replay for later reviewed phases.
+## Phase 1 — 6 Nov 2026 · Foundation
 
-## 6 November 2026 — skeleton and initial checks
-- Added React/TypeScript/Vite page, health fetch, FastAPI endpoint, Dockerfiles, Nginx and Compose; copied CSV byte-for-byte.
-- Added read-only audit, initial Pytest cases, three Codex reviewer TOMLs, three skills and concise engineering docs.
-- `npm install` succeeded: 24 packages added, 0 reported vulnerabilities. Initial `npm run build` passed typecheck/bundle.
-- `uv venv` initially selected Python 3.11; recreated explicitly with `/usr/bin/python3.14` to match Docker and recompiled both requirements locks.
-- Installed locked development dependencies. Initial backend run: 9 passed, with a Starlette TestClient HTTPX deprecation warning and relative-path interpreter warnings.
-- Switched health test to HTTPX ASGITransport and used the absolute interpreter path; subsequent run: 10 passed in 0.41s, no warnings.
-- Independent data review confirmed source measurements and found fractional seconds could corrupt second-grid totals; excluded them from grid counts and added a regression test.
-- Latest local `npm run build` passed after health-effect cleanup fix. `docker compose config --quiet` passed; Docker build/start verification remains in progress at this entry.
-- Skill validator initially failed three times due to absent PyYAML; retrying with isolated `uv run --with pyyaml`. All four TOMLs parse; required agent keys present.
-- Next: finish Docker/browser checks, record actual outcomes, run scoped release review and stop for foundation review.
+- Built React/TypeScript/Vite and FastAPI health behind Nginx; Docker Compose startup, same-origin health and Nginx configuration passed. CSV remained byte-identical.
+- Audited 35,820 rows; found conflicting keys, missing observations, mixed timestamps and heading aliases. Data review found off-grid counting corruption; fixed with a regression test.
+- Initial venv selected Python 3.11; recreated with 3.14. Replaced deprecated TestClient use and avoided relative-interpreter warnings. Final backend suite: 10 passed without warnings.
+- Frontend production build passed; local Firefox verified connected/error/timeout states, no page errors and mobile width. Connected browser could not reach localhost; bundled Firefox supplied the verified screenshot.
+- Release review reproduced a README `realpath` bug that bypassed venv packages; corrected activation commands and independently retested (10 passed). Data and release re-reviews reported no remaining foundation findings.
+- Skills initially failed validation without PyYAML; isolated retry passed all three. Four TOMLs validated; native discovery remained untested. Docker used classic builder without buildx; a whitespace wrapper's normal exit-1 handling was corrected.
+- Read the private assignment and official framework/Codex docs; Praman raw/API reads worked after browser fetch failed. Initialized Git without committing/publishing in that session; ingestion, map and replay were pending at handoff.
 
-## 6 November 2026 — Docker and browser verification
-- `docker compose up --build -d --wait` succeeded; backend and frontend are healthy. Rebuilt after final frontend cleanup change.
-- Docker warned that buildx is unavailable and used its classic builder successfully; no BuildKit-specific features are needed.
-- `curl --fail --silent http://localhost:8080/api/health` returned `{"status":"ok"}`; container `nginx -t` passed.
-- `cmp` verified source byte identity; hashing the container-mounted CSV returned the same SHA-256. Git ignores PDFs; source PDF remains outside the repo.
-- `uv run --with pyyaml python …/quick_validate.py` passed for all three skills; PyYAML stayed outside application dependencies.
-- Connected Playwright navigation failed with connection refused; local bundled Playwright/Firefox could reach the app and verified it instead.
-- Local browser check: title correct, “Backend connected”, health HTTP 200, zero page errors, no horizontal overflow at 390×844.
-- Intercepted HTTP 503 and a stalled health request: both showed “Backend unavailable”; captured actual desktop screenshots/foundation.png at 1280×900.
-- Independent data re-review: fractional-second issue fixed, DATA_AUDIT matches source; reviewer ran 10 tests successfully without warnings.
-- `git diff --check` passed for tracked changes (files are still untracked). Next: scope-limited release review; stop before ingestion/replay.
+## Phase 2 — 6 Nov 2026 · Ingestion and normalization
 
-## 6 November 2026 — release review and handoff
-- Release reviewer independently checked assignment/current scope, code/docs, healthy services, health route, Nginx configuration and actual screenshot.
-- Found a README command bug: `realpath` dereferenced the venv Python symlink into the system interpreter, producing `No module named pytest`.
-- Fixed instructions to activate the venv before `(cd backend && python -m pytest -q)`; parent ran exact commands: 10 passed in 0.40s, no warnings.
-- Reviewer independently reran the corrected commands: 10 passed in 0.39s, no warnings; no remaining actionable foundation findings.
-- A first untracked whitespace wrapper misread normal `git diff --no-index` exit 1 as a failure; corrected diagnostic handling and checked 31 text files with no issues.
-- Final repository has 39 project files; ignored local caches/dependencies are omitted from the handoff tree. No empty `.github` directory or placeholder workflow added.
-- Reviewer/skill files validate, but native custom-agent discovery has not been tested in a fresh Codex session; reviews here used session subagents with those instructions.
-- Docker services remain running at :8080. Git initialized on main, no commits/remotes/pushes; private PDF was not copied into the repository.
-- Foundation and initial audit are complete; runtime ingestion, map, WebSocket/replay, final screenshot and final submission remain pending.
-- Next: user reviews foundation; phase 2 implements tested normalization/ingestion before replay. Study timezone, duplicate policy and gap representation first.
+- Inspected clean foundation commit `bc23f51`; condensed Phase 1 once with originals preserved in Git, and updated AGENTS/build-journal conventions. Reused the existing schema/time parser for audit and runtime.
+- Added strict line-specific validation, in-memory UTC/heading normalization, sorted vessel/time indexes, inclusive gaps and discard records; FastAPI lifespan loads once, `/api/meta` returns summary counts/bounds, and health response stays unchanged.
+- Investigated both T007 sequences against adjacent observations; retained continuous stationary positions, discarded 40 conflicts without ID reassignment, and represented missing current observations as `None`. Numerical evidence and heuristic limits are in DATA_AUDIT.
+- First test run: 52 passed, 2 failed due to an equal-length fixture mislabeled as unique and an incorrect `Z` serialization expectation. Corrected the fixtures without weakening ambiguity checks; 55 then passed. Independent review caught invalid offset minutes accepted by Python; bounded offsets and added four regression cases.
+- Final local suite after the offset fix: 59 passed without warnings. Audit and independent raw-source review reconcile 35,820 source rows to 35,780 observations plus 40 discarded, with 220 missing seconds and 11 heading aliases; source checksum/bytes match the original.
+- Docker Compose build/start and proxied health/meta passed before final offset rebuild. Final rebuild/re-review and whitespace checks are pending at this entry; stop before WebSockets, map or playback. No commit/push performed.
+- Final offset rebuild completed with both services healthy; proxied health/meta and container source hash passed. Data re-review independently passed 59 tests and confirmed policies/evidence; release review independently verified tests/audit/containers/history and requested a startup-readiness wording fix, now corrected. `git diff --check` and updated skill validation passed; Phase 2 complete, awaiting user review before Phase 3.
