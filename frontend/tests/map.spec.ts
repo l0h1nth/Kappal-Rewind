@@ -1,49 +1,5 @@
-import { expect, test, type Page, type WebSocketRoute } from '@playwright/test';
-import type { Metadata, ReplayFrame, Vessel } from '../src/types';
-
-// Small synthetic frames test UI behavior; real CSV/network checks are separate.
-const metadata: Metadata = {
-  start: '2026-11-02T03:30:00Z', end: '2026-11-02T03:59:59Z',
-  recording_seconds: 1800, vessel_count: 20, record_count: 35780,
-  bounds: { south: 13.03159, north: 13.109132, west: 80.29829, east: 80.371457 },
-};
-const vessel = (id: string, lat: number, lon: number, heading = 0): Vessel => ({
-  id, lat, lon, heading, speed_knots: 5,
-  trail_segments: [[[lat - .001, lon - .001], [lat, lon]]],
-});
-const initial: ReplayFrame = {
-  type: 'state', second: 0, duration_seconds: 1800, playing: false, speed: 1,
-  timestamp: metadata.start, vessels: [vessel('T007', 13.082801, 80.358893, 0), vessel('T012', 13.055, 80.32, 90)],
-};
-
-async function setup(page: Page, options: { metadataError?: boolean; tileError?: boolean; metadata?: Metadata; frame?: ReplayFrame } = {}) {
-  const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
-  await page.route('**/api/meta', route => route.fulfill({
-    status: options.metadataError ? 503 : 200, json: options.metadata ?? metadata,
-  }));
-  // Tests never download/prefetch OpenStreetMap tiles.
-  await page.route('https://tile.openstreetmap.org/**', route => options.tileError ? route.abort() : route.fulfill({
-    contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64'),
-  }));
-  let socket: WebSocketRoute;
-  let connections = 0;
-  const commands: unknown[] = [];
-  await page.routeWebSocket('**/ws/replay', route => {
-    socket = route;
-    connections++;
-    route.onMessage(message => {
-      const command = JSON.parse(message.toString());
-      commands.push(command);
-      route.send(JSON.stringify({ ...(options.frame ?? initial), playing: command.type === 'play' }));
-    });
-    route.send(JSON.stringify(options.frame ?? initial));
-  });
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
-  return { send: (frame: unknown) => socket.send(JSON.stringify(frame)),
-    close: () => socket.close(), connections: () => connections, commands, errors };
-}
+import { expect, test } from '@playwright/test';
+import { setup, initial, metadata, vessel } from './fixtures';
 
 test('metadata fits real bounds, markers point north/east, selection and play/pause work', async ({ page }) => {
   const server = await setup(page);
@@ -103,7 +59,7 @@ test('frames move markers, replace trails, preserve pan/zoom and remove missing 
   // Backward seek: frame is the complete replacement, without old future segments.
   server.send(initial);
   await expect(page.locator('path.vessel-trail')).toHaveCount(2);
-  await expect(page.locator('time')).toHaveText('09:00:00');
+  await expect(page.locator('time[aria-label="Current replay time"]')).toHaveText('09:00:00');
   expect(await mapElement!.evaluate(element => element === document.querySelector('.leaflet-container'))).toBe(true);
   await expect(page.locator('.leaflet-map-pane')).toHaveAttribute('style', view!);
   server.send({ ...initial, second: 600, timestamp: '2026-11-02T03:40:00Z', vessels: [initial.vessels[0]] });
@@ -126,12 +82,12 @@ test('disconnect clears positions, reconnect starts fresh, malformed messages re
   server.send(initial);
   await expect(page.locator('.vessel-marker')).toHaveCount(2);
   server.close();
-  await expect(page.getByRole('status')).toHaveText('disconnected');
+  await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('disconnected');
   await expect(page.locator('.vessel-marker')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Play' })).toBeDisabled();
   await page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(page.getByRole('status')).toHaveText('connected');
-  await expect(page.locator('time')).toHaveText('09:00:00');
+  await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
+  await expect(page.locator('time[aria-label="Current replay time"]')).toHaveText('09:00:00');
   expect(server.connections()).toBe(2);
   expect(server.errors).toEqual([]);
 });

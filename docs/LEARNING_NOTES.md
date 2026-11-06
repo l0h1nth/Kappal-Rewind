@@ -78,3 +78,19 @@ Further reading: [React effects](https://react.dev/reference/react/useEffect),
 [React Leaflet MapContainer](https://react-leaflet.js.org/docs/api-map/),
 [Leaflet 1.9](https://leafletjs.com/reference-1.9.4.html),
 [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/).
+
+## Phase 5 — timeline and current details
+
+| Concept / code | How it works here | Interview question |
+| --- | --- | --- |
+| Controlled input / [Timeline](../frontend/src/components/Timeline.tsx) | Range value is the drag draft or confirmed frame second. Pointer changes update draft; release sends one seek. Keyboard input sends immediately. | Why would binding only to incoming frames make a drag jump? |
+| State vs refs / `Timeline`, [useReplaySocket](../frontend/src/hooks/useReplaySocket.ts) | State renders draft/frame/busy. Refs hold drag flags, latest frame, pending transaction and timeout across handlers without scheduling renders. | Why can a socket callback read stale React state, and when is a ref appropriate? |
+| Acknowledgement / `send`, socket `onmessage` | Only one command is pending. Playing seeks use pause→seek→resume; the paused response drains earlier automatic frames. Draft clears after confirmation. | Why does a matching second alone fail to prove a streaming seek completed? |
+| Clock/speed / `confirms` | Server clock advances replay. Select sends set_speed and displays returned speed; timeout only detects missing acknowledgement. | Why would a frontend interval drift or disagree after a speed change? |
+| Selection / [VesselPanel](../frontend/src/components/VesselPanel.tsx), [App](../frontend/src/App.tsx) | App stores selected ID; panel looks it up in every complete frame. Missing fix renders a status without coordinates/speed/heading; reconnect waits for fresh data. | How can identity survive while its observation disappears? |
+| Responsive layout / [style.css](../frontend/src/style.css) | Desktop grid gives map most width; at 800px sidebar stacks and controls wrap. MapContainer remains mounted, preserving its view. | Why should resizing change layout rather than recreate the map? |
+
+Practical bug: disabling the focused range/select during acknowledgement moved
+Firefox focus to the page, preventing the next key. Guarded aria-disabled preserves
+focus; delayed-ack tests use actual consecutive keyboard events. Study
+[playback tests](../frontend/tests/playback.spec.ts) alongside the handlers above.

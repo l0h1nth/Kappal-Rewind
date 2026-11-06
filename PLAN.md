@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope ends after Phase 4.
+Python/FastAPI and WebSockets. Current authorized scope ends after Phase 5.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -41,9 +41,9 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 4.
 - [x] Verify six focused browser tests, 115 backend tests, frontend build, real Docker/browser tiles/motion/gaps and independent reviews.
 
 ## 5. Timeline, vessel details and integration
-- [ ] Play/pause/scrub match server clock, including backward seeks and stale-frame handling.
-- [ ] Clicking a marker shows current ID, speed in knots and heading in degrees.
-- [ ] Trail age, selected-vessel gaps and reconnect behavior are defined and verified through Nginx.
+- [x] Play/pause/scrub match server clock, including backward seeks and stale-frame handling.
+- [x] Clicking a marker shows current ID, speed in knots and heading in degrees.
+- [x] Trail age, selected-vessel gaps and reconnect behavior are defined and verified through Nginx.
 
 ## 6. Testing, documentation and final submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
@@ -51,5 +51,6 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 4.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phase 4 is complete. Stop for review before Phase 5 timeline,
-speed controls, scrubber and selected-vessel details sidebar.
+**Review gate:** Phase 5 is complete with independent replay/release review.
+Stop before Phase 6 final end-to-end verification, screenshot, README/repository
+cleanup and submission preparation.

@@ -81,3 +81,17 @@
   current fixes. Initial-fit markers may overlap; users can zoom or use keyboard
   selection. OSM tiles use the official URL, visible attribution and browser cache/
   Referer defaults; no prefetch/offline feature or tile proxy.
+
+## Native timeline draft and ordered seek acknowledgement
+- **Decision:** use a native range with a temporary drag draft; serialize commands in
+  the socket hook. An active seek pauses, waits for the paused frame, seeks to an
+  exact paused target, then resumes unless at the end. Show only confirmed speed.
+- **Reason:** the existing protocol has no request IDs; a streaming frame can share
+  the requested second without acknowledging a seek. The pause response is a barrier
+  in the backend's ordered loop, so old automatic frames cannot follow it.
+- **Alternative considered:** assume any matching streaming second acknowledges the
+  seek, or add protocol fields/backend changes.
+- **Tradeoff:** active seeks add two command round trips. Controls wait for confirmation;
+  five-second command deadlines fail visibly and require a fresh session. Range/select
+  stay focused using guarded aria-disabled while busy; native disabled is used when
+  unavailable. The draft and deadline never advance recorded time.

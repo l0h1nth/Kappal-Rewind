@@ -78,3 +78,26 @@ this file records contributions and reviewer scope.
   WebSocket smoke and configuration/source checks; requested learning-note wording
   corrections and visually verified final settled desktop/mobile screenshots. It
   did not rebuild images or repeat real tile/motion or prolonged-load checks.
+
+## Phase 5 — 6 Nov 2026
+- Codex implemented timeline/details/layout, ordered command acknowledgement and
+  focused browser tests, with existing backend/protocol/dependencies unchanged.
+  Updated teaching notes and concise phase records; no commits/pushes.
+- Consulted official [React controlled inputs](https://react.dev/reference/react-dom/components/input),
+  [React refs](https://react.dev/reference/react/useRef) and
+  [MDN range input](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/range).
+- Independent replay_reviewer inspected synchronization, races, missing data and
+  cleanup; ran 13 browser tests, then independently reproduced focus loss with delayed
+  acknowledgements. Codex fixed it and added a regression. Re-review passed five
+  targeted tests and reported no remaining findings; mocked Firefox scope only.
+- Codex ran 14 mocked-frame/tile browser tests, backend tests/build, Docker rebuild,
+  real network smoke and actual Firefox UI with real tiles/data. UI-driven seeking
+  verified real gaps, T007, reset/boundaries and active 10× pause→seek→resume;
+  additional real UI checks measured 2×/5× progression with tiles blocked.
+  Temporary desktop/mobile captures were visually inspected; repository preview
+  remains explicitly labeled Phase 4. Human verification is not claimed.
+- Independent release_reviewer inspected all changed/new code and docs, reran
+  14 browser tests, 115 backend tests, production build, actual network/config/source
+  checks and visually inspected temporary captures; no actionable findings. It did
+  not rebuild images or repeat the parent's real-tile UI checks. Prolonged idle/load,
+  other browser engines and comprehensive tile-provider outages remain unverified.
