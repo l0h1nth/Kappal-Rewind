@@ -142,3 +142,20 @@ this file records contributions and reviewer scope.
   this session; all 19 Firefox tests passed, independently repeated by the replay reviewer. Final
   release documentation review found no issues. No human verification or measured
   performance improvement is claimed.
+
+## E2 — 8 Nov 2026
+- Codex implemented discovery/metadata validation and trusted-ID APIs, bounded
+  DuckDB preview, read-only library/details UI, upload-triggered refresh and tests.
+  Applied build-journal; kept original CSV/ingestion/replay and existing volume intact.
+- Consulted official [DuckDB Parquet](https://duckdb.org/docs/data/parquet) and
+  [SELECT/ORDER BY/LIMIT](https://duckdb.org/docs/current/sql/statements/select)
+  documentation. Local storage/parser code supplied E1 compatibility details.
+- Independent data reviewer ran 45 upload/catalog tests and compared 100 previews
+  against raw source; replay reviewer ran regressions and separate delayed-response
+  checks. Release reviewer ran 160 backend tests/build and initial browser suite.
+  Final release re-review passed five new library tests, checked live details/preview
+  for eight recordings and reviewed documentation; no actionable findings.
+- Codex ran 160 backend/24 Firefox tests, build and actual Docker/API/UI/restart
+  checks with mocked map tiles. A shared Vite shutdown interrupted the first expanded
+  browser run; isolated rerun passed. Temporary visual captures were inspected;
+  no new submission screenshot, human verification, performance claim or commit/push.

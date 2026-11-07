@@ -3,6 +3,7 @@ import { VesselMap } from './components/VesselMap';
 import { Timeline } from './components/Timeline';
 import { VesselPanel } from './components/VesselPanel';
 import { UploadCsv } from './components/UploadCsv';
+import { DatasetLibrary } from './components/DatasetLibrary';
 import { istTime } from './format';
 import { useReplaySocket } from './hooks/useReplaySocket';
 import { parseMetadata, type Metadata } from './types';
@@ -12,6 +13,7 @@ export function App() {
   const [metadataError, setMetadataError] = useState<string | null>(null);
   const [metadataAttempt, setMetadataAttempt] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [libraryRevision, setLibraryRevision] = useState(0);
   const { frame, status, error, busy, send, reconnect } = useReplaySocket();
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export function App() {
       <span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : 'Waiting for replay state'}</span>
       <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span>
     </footer>
-    <UploadCsv />
+    <UploadCsv onImported={() => setLibraryRevision(value => value + 1)} />
+    <DatasetLibrary revision={libraryRevision} />
   </main>;
 }

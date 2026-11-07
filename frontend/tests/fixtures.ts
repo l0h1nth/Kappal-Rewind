@@ -19,6 +19,8 @@ export const initial: ReplayFrame = {
 export async function setup(page: Page, options: { metadataError?: boolean; tileError?: boolean; metadata?: Metadata; frame?: ReplayFrame; autoRespond?: boolean; sendInitial?: boolean } = {}) {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/api/datasets', route => route.request().method() === 'GET'
+    ? route.fulfill({ json: [] }) : route.fallback());
   await page.route('**/api/meta', route => route.fulfill({
     status: options.metadataError ? 503 : 200, json: options.metadata ?? metadata,
   }));

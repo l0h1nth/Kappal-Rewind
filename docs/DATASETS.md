@@ -1,4 +1,4 @@
-# E1 — CSV import storage
+# Uploaded recordings — E1–E2
 
 Open **Upload CSV**, or POST one multipart `file` to `/api/datasets`:
 ```sh
@@ -39,5 +39,31 @@ with duckdb.connect() as connection:
 ```
 Volume data survives container recreation; `docker compose down -v` deletes it.
 Handled failures clean staging files; abrupt process termination may leave a hidden
-`.import-*` directory. Total stored disk usage has no quota. Listing, selection,
-replay switching, deletion and partitioning remain outside E1.
+`.import-*` directory. Total stored disk usage has no quota. Selection, replay switching, deletion and partitioning remain deferred.
+
+## E2 — library, details and preview
+
+| Read-only API | Result |
+| --- | --- |
+| `GET /api/datasets` | Metadata array; empty if none available. No observation query. |
+| `GET /api/datasets/{id}` | Validated saved metadata for one recording. |
+| `GET /api/datasets/{id}/preview?limit=20` | `{dataset_id, rows}`; default 20, maximum 100. |
+
+IDs must be 32 lowercase hex characters; malformed IDs/limits return 422, unknown
+or unavailable metadata returns 404. Discovery reads at most 64 KiB per metadata
+file and skips hidden/incomplete/corrupt/symlink entries. A root storage error
+returns 503; a corrupt Parquet preview returns generic 500 while details can remain
+available. Files are never modified by these read endpoints.
+
+New uploads save UTC `imported_at`; E1 files without it return null and show
+**Unknown (E1 import)**. Sort is newest-first, unknown dates last, with ascending
+UUID ties. Filesystem times are not substituted. Source counts remain inside
+`validation`, as in E1. Extra metadata fields are not exposed.
+
+My Recordings refreshes automatically after upload and supports explicit Refresh.
+Details show IST dates/validation plus a horizontally scrollable preview; its API
+returns UTC observations ordered by timestamp, then vessel ID. SQL applies LIMIT
+before results enter Python; DuckDB may still scan rows to order them. Scanning
+JSON on each request is simple but scales with library size; no pagination/index
+or full Parquet integrity scan is added in E2. A normal `docker compose restart`
+preserves the existing named volume; it does not reconstruct uploads from memory.

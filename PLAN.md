@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is Enhancement E1 only.
+Python/FastAPI and WebSockets. Current authorized scope is Enhancement E2 only.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -53,15 +53,18 @@ Python/FastAPI and WebSockets. Current authorized scope is Enhancement E1 only.
 
 ## Optional enhancements (E1–E5)
 
-Only E1 is authorized. E2–E5 are provisional follow-up scopes, not implemented.
+E1 is complete; E2 is authorized. E3–E5 remain provisional, unimplemented follow-ups.
 
 ### E1 — CSV upload and Parquet storage
 - [x] Reuse normalization with explicit upload timezone, bounded CSV/multipart/work validation.
 - [x] Atomically store verified Parquet and metadata in a persistent Docker volume.
 - [x] Add minimal upload UI; verify read-back, failure cleanup and original replay regression.
 
-### E2 — Dataset library and preview (deferred)
-- [ ] Define and authorize metadata listing/preview workflow.
+### E2 — Persistent dataset library and preview
+- [x] Discover validated saved metadata, preserving E1 compatibility and unknown import dates.
+- [x] Add trusted-ID details and bounded, deterministically ordered DuckDB previews.
+- [x] Add read-only library/details UI, upload-triggered refresh and race/error states.
+- [x] Verify tests/build, normal Docker restart persistence, source integrity and independent reviews.
 
 ### E3 — Dataset selection and replay integration (deferred)
 - [ ] Define and authorize selecting a stored recording for independent replay sessions.
@@ -78,6 +81,6 @@ Only E1 is authorized. E2–E5 are provisional follow-up scopes, not implemented
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6 are complete. E1 is complete with independent data/replay/release review; stop
-before E2–E5 or Phase 7 final verification, screenshot, repository cleanup and
-submission preparation.
+**Review gate:** Phases 1–6 and E1 are complete. E2 is complete with independent data/replay/release review.
+Stop before E3–E5 or Phase 7 final verification, screenshot, repository cleanup
+and submission preparation.

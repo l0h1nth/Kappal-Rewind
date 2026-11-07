@@ -48,3 +48,16 @@ def read_parquet(source: Path) -> list[tuple]:
     # dependency for Python TIMESTAMPTZ conversion. Parquet still stores UTC instants.
     return [(row[0], datetime.fromisoformat(row[1]).replace(tzinfo=timezone.utc), *row[2:])
             for row in rows]
+
+
+def preview_parquet(source: Path, limit: int = 20) -> list[dict]:
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("preview limit must be an integer from 1 to 100")
+    with duckdb.connect(config={"threads": 1, "memory_limit": "128MB", "temp_directory": ""}) as connection:
+        rows = connection.execute("""
+            SELECT track_id, CAST(timestamp AT TIME ZONE 'UTC' AS VARCHAR),
+                   lat, lon, speed_knots, heading
+            FROM read_parquet(?) ORDER BY timestamp, track_id LIMIT ?
+        """, [str(source), limit]).fetchall()
+    return [{"track_id": row[0], "timestamp": datetime.fromisoformat(row[1]).replace(tzinfo=timezone.utc).isoformat(),
+             "lat": row[2], "lon": row[3], "speed_knots": row[4], "heading": row[5]} for row in rows]

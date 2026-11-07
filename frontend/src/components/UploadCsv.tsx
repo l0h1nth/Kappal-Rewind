@@ -17,7 +17,7 @@ interface ImportResult {
   };
 }
 
-export function UploadCsv() {
+export function UploadCsv({ onImported }: { onImported?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -54,6 +54,7 @@ export function UploadCsv() {
         throw new Error('The server returned an invalid upload result. The import may have completed.');
       }
       setResult(data);
+      onImported?.();
     } catch (failure) {
       if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Upload response unavailable.');
     } finally {

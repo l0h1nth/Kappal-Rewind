@@ -116,3 +116,13 @@
 - **Tradeoff:** normalization and verification still use memory; conservative import
   limits bound work. Raw/discarded CSV values are not retained. Atomic publication
   prevents partial valid datasets; it does not promise power-loss durability.
+
+## E2 — metadata discovery and bounded read-only previews
+- **Decision:** discover validated E1 UUID directories on request; retain JSON as the
+  registry. New uploads add UTC imported_at; older missing dates remain null and
+  sort last, with UUID tie-breaking. Resolve requested IDs through discovered entries.
+- **Reason:** compatibility and restart persistence without a second database,
+  invented filesystem-derived dates or user-controlled paths.
+- **Tradeoff:** lookup/list work grows with stored files. Bounded metadata reads and
+  SQL LIMIT 20–100 keep individual payloads small; they do not eliminate Parquet scan
+  work. Skip unusable metadata; report preview failures without modifying files.

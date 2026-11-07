@@ -5,19 +5,21 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import BinaryIO
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
 from app.ingestion import DatasetLimitError, load_dataset
-from app.storage import normalized_rows, read_parquet, write_parquet
+from app.catalog import DATASET_ID, StoredDataset, discover_datasets
+from app.storage import normalized_rows, preview_parquet, read_parquet, write_parquet
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_REQUEST_BYTES = 11 * 1024 * 1024  # Includes multipart boundaries/headers.
@@ -82,6 +84,7 @@ def import_dataset(source: BinaryIO, filename: str, root: Path, naive_timezone: 
         exact = sum(d.reason == "normalized exact duplicate" for d in dataset.discarded)
         metadata = {
             "dataset_id": dataset_id, "original_filename": filename,
+            "imported_at": datetime.now(timezone.utc).isoformat(),
             "vessel_count": len(dataset.observations), "accepted_row_count": dataset.record_count,
             "start": dataset.start.isoformat(), "end": dataset.end.isoformat(),
             "duration_seconds": int((dataset.end - dataset.start).total_seconds()) + 1,
@@ -100,6 +103,43 @@ def import_dataset(source: BinaryIO, filename: str, root: Path, naive_timezone: 
         csv_path.unlink()  # Keep no raw CSV copy; Parquet contains accepted observations.
         staging.rename(root / dataset_id)
     return metadata
+
+
+def published_datasets(root: Path) -> list[StoredDataset]:
+    try:
+        return discover_datasets(root)
+    except OSError as error:
+        raise HTTPException(503, "Recording library is unavailable. Try again later.") from error
+
+
+def lookup_dataset(root: Path, dataset_id: str) -> StoredDataset:
+    if not DATASET_ID.fullmatch(dataset_id):
+        raise HTTPException(422, "Dataset ID must be 32 lowercase hexadecimal characters.")
+    # Resolve only through discovered metadata; user input never becomes a file path.
+    for record in published_datasets(root):
+        if record.metadata["dataset_id"] == dataset_id:
+            return record
+    raise HTTPException(404, "Recording not found or its metadata is unavailable.")
+
+
+@router.get("/api/datasets")
+def list_datasets(request: Request):
+    return [record.metadata for record in published_datasets(request.app.state.upload_root)]
+
+
+@router.get("/api/datasets/{dataset_id}")
+def dataset_details(dataset_id: str, request: Request):
+    return lookup_dataset(request.app.state.upload_root, dataset_id).metadata
+
+
+@router.get("/api/datasets/{dataset_id}/preview")
+def dataset_preview(dataset_id: str, request: Request, limit: int = Query(default=20, ge=1, le=100)):
+    record = lookup_dataset(request.app.state.upload_root, dataset_id)
+    try:
+        rows = preview_parquet(record.parquet, limit)
+    except Exception as error:
+        raise HTTPException(500, "Preview unavailable for this recording. Stored files were not changed.") from error
+    return {"dataset_id": dataset_id, "rows": rows}
 
 
 @router.post("/api/datasets", status_code=201)

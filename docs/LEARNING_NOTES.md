@@ -135,3 +135,26 @@ limit? Why publish the directory only after read-back, rather than writing direc
 to its final UUID? Study the extreme-date and truncated-multipart regression tests:
 normal gap sentinels overflowed at year boundaries; a completed CSV part alone did
 not establish that the full multipart upload had completed.
+
+## E2 — persistent library
+
+- Metadata describes a recording (identity, counts, dates, validation); listing
+  [catalog.py](../backend/app/catalog.py) reads JSON rather than all observations.
+  validate_metadata checks consistency; discover_datasets skips unusable entries.
+- Stable UUIDs distinguish identical filenames. [lookup_dataset](../backend/app/datasets.py)
+  validates an ID and finds its already-discovered Parquet path; the request never
+  becomes a filesystem path. Legacy import dates remain unknown instead of guessed.
+- [preview_parquet](../backend/app/storage.py) runs SELECT over the stored file with
+  ORDER BY timestamp/track_id and a bound LIMIT. At most 100 rows reach Python/React;
+  sorting may still scan the file. No mutable DuckDB database is required.
+- Docker's existing named volume retains JSON/Parquet when processes restart.
+  Corrupt metadata is omitted/returns 404; corrupt Parquet can leave details visible
+  but produces a preview error. Per-request JSON scans are the main small-library
+  tradeoff; bounded reads/output mitigate memory/payload growth, not lookup cost.
+- [DatasetLibrary](../frontend/src/components/DatasetLibrary.tsx) separates library
+  state from replay. Upload increments a revision; abort/active guards and keyed
+  details prevent an old response from replacing the newly opened recording.
+
+Interview questions: Why is filename an unsafe identity even without malicious
+input? Why can metadata list quickly while preview needs a SQL query? Why does a
+LIMIT bound Python results without guaranteeing that DuckDB reads only 20 rows?

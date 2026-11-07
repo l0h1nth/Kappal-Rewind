@@ -14,6 +14,7 @@ test('upload progress and validation leave the replay session unchanged', async 
   let body = '';
   const wait = new Promise<void>(resolve => { release = resolve; });
   await page.route('**/api/datasets', async route => {
+    if (route.request().method() === 'GET') { await route.fulfill({ json: [] }); return; }
     expect(route.request().headers()['content-type']).toContain('multipart/form-data; boundary=');
     body = route.request().postData() ?? '';
     await wait;
