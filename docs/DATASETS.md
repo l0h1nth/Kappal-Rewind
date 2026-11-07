@@ -1,4 +1,4 @@
-# Uploaded recordings — E1–E2
+# Uploaded recordings — E1–E3
 
 Open **Upload CSV**, or POST one multipart `file` to `/api/datasets`:
 ```sh
@@ -39,7 +39,7 @@ with duckdb.connect() as connection:
 ```
 Volume data survives container recreation; `docker compose down -v` deletes it.
 Handled failures clean staging files; abrupt process termination may leave a hidden
-`.import-*` directory. Total stored disk usage has no quota. Selection, replay switching, deletion and partitioning remain deferred.
+`.import-*` directory. Total stored disk usage has no quota. Deletion and partitioning remain deferred.
 
 ## E2 — library, details and preview
 
@@ -67,3 +67,25 @@ before results enter Python; DuckDB may still scan rows to order them. Scanning
 JSON on each request is simple but scales with library size; no pagination/index
 or full Parquet integrity scan is added in E2. A normal `docker compose restart`
 preserves the existing named volume; it does not reconstruct uploads from memory.
+
+## E3 — replay stored observations
+
+Use **Replay** on a library card or **Replay built-in assignment** above the map.
+The current filename/ID stays visible; a successful switch starts paused at zero,
+1×. Uploading alone still leaves playback unchanged. Selection and error behavior:
+[protocol](PROTOCOL.md#e3--select-a-recording-when-connecting).
+
+FastAPI resolves IDs through the existing catalog, then aggregate-checks normalized
+values/counts/IDs/UTC range and derives bounds without fetching all rows into
+Python. Replay queries all vessels once per needed `[max(start,t−59s),t]` window,
+ordered by timestamp/ID. Current fixes require an exact timestamp; gaps stay gaps.
+Only one requested window is cached per connection, replaced on seek/progress;
+no full-recording Python load, per-vessel query or shared active dataset exists.
+DuckDB may scan Parquet rows beyond the returned window; row-group pruning and
+performance have not been benchmarked. Existing 10 MiB/50,000-row import limits
+remain. External file mutation during active replay is unsupported.
+
+Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
+```sh
+.venv/bin/python scripts/verify_multidataset.py FIRST_UUID SECOND_UUID
+```

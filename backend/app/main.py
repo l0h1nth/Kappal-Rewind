@@ -1,17 +1,26 @@
 import os
+import asyncio
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from time import monotonic
 
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
-from app.datasets import MAX_REQUEST_BYTES, configure_uploads, router as datasets_router
+from app.datasets import MAX_REQUEST_BYTES, configure_uploads, lookup_dataset, router as datasets_router
 from app.ingestion import load_dataset
 from app.replay_socket import stream_replay
+from app.track_store import MemoryTrackStore, ParquetTrackStore
 
 DEFAULT_CSV = Path(__file__).resolve().parents[2] / "data/tracks.csv"
+
+
+def select_track_store(application: FastAPI, dataset_id: str):
+    if dataset_id == "builtin":
+        return MemoryTrackStore(application.state.dataset)
+    return ParquetTrackStore(lookup_dataset(application.state.upload_root, dataset_id))
 
 
 def create_app(
@@ -46,8 +55,32 @@ def create_app(
         }
 
     @application.websocket("/ws/replay")
-    async def replay(websocket: WebSocket):
-        await stream_replay(websocket, websocket.app.state.dataset, replay_clock)
+    async def replay(websocket: WebSocket, dataset_id: str = "builtin"):
+        try:
+            store = await run_in_threadpool(select_track_store, websocket.app, dataset_id)
+        except Exception as error:
+            message = error.detail if isinstance(error, HTTPException) else "Recording could not be opened. Choose another recording."
+            await websocket.accept()
+            try:
+                await asyncio.wait_for(websocket.send_json({"type": "error", "message": message}), timeout=5)
+            except (WebSocketDisconnect, OSError, TimeoutError):
+                pass
+            finally:
+                try:
+                    await asyncio.wait_for(websocket.close(code=1008), timeout=1)
+                except (WebSocketDisconnect, OSError, RuntimeError, TimeoutError):
+                    pass
+            return
+        await stream_replay(websocket, store, replay_clock)
+
+    @application.get("/api/replay/{dataset_id}/meta")
+    def replay_metadata(dataset_id: str, request: Request):
+        try:
+            return select_track_store(request.app, dataset_id).get_metadata()
+        except HTTPException:
+            raise
+        except Exception as error:
+            raise HTTPException(500, "Recording could not be opened. Stored files were not changed.") from error
 
     return application
 

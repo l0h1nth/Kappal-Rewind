@@ -21,6 +21,10 @@ h1 em { font-family: Georgia, serif; color: #c8df8d; font-weight: 400; }
 .error .connection-dot, .disconnected .connection-dot { background: #f7ad90; }
 .map-caption { display: flex; align-items: center; gap: 18px; padding: 17px 0; }
 .map-caption .eyebrow { margin: 0; }
+.recording-choice { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; }
+.recording-choice p { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.recording-choice strong { color: #c8df8d; }
+.recording-replay { margin: 6px 0 0 8px; }
 .eyebrow { color: #c8df8d; font-size: 10px; letter-spacing: .2em; margin: 0 0 6px; }
 .recording-date { margin: 0; color: #a3b7b7; font-size: 13px; }
 .playback { display: flex; align-items: center; gap: 10px; }

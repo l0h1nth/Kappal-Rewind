@@ -7,16 +7,18 @@ from time import monotonic
 
 from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
+from starlette.concurrency import run_in_threadpool
 
 from app.ingestion import Dataset
 from app.replay import ReplaySession, build_frame
+from app.track_store import TrackStore
 
 UPDATE_INTERVAL = 0.1  # At most 10 automatic state frames per wall-clock second.
 SEND_TIMEOUT = 5.0
 
 
 async def stream_replay(
-    websocket: WebSocket, dataset: Dataset, clock: Callable[[], float] = monotonic,
+    websocket: WebSocket, dataset: Dataset | TrackStore, clock: Callable[[], float] = monotonic,
 ) -> None:
     duration = int((dataset.end - dataset.start).total_seconds()) + 1
     session = ReplaySession(duration, clock)
@@ -28,7 +30,7 @@ async def stream_replay(
 
     try:
         await websocket.accept()
-        frame = build_frame(dataset, session)
+        frame = await run_in_threadpool(build_frame, dataset, session)
         await send(frame)
         last_state = (frame["second"], frame["playing"], frame["speed"])
         next_update = loop.time() + UPDATE_INTERVAL
@@ -55,7 +57,7 @@ async def stream_replay(
                     force_state = True
             # Also publish due progress after errors; bad traffic cannot stop the clock.
             if force_state or loop.time() >= next_update:
-                frame = build_frame(dataset, session)
+                frame = await run_in_threadpool(build_frame, dataset, session)
                 state = (frame["second"], frame["playing"], frame["speed"])
                 if force_state or state != last_state:
                     await send(frame)
@@ -63,6 +65,11 @@ async def stream_replay(
                 next_update = loop.time() + UPDATE_INTERVAL
     except (WebSocketDisconnect, OSError, TimeoutError):
         pass  # Includes failed sends and the explicit slow-client timeout.
+    except Exception:
+        try:
+            await send({"type": "error", "message": "Recording data is unavailable. Reconnect or choose another recording."})
+        except (WebSocketDisconnect, OSError, TimeoutError):
+            pass
     finally:
         if websocket.application_state == WebSocketState.CONNECTED:
             try:

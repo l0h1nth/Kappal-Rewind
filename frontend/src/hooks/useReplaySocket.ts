@@ -15,7 +15,7 @@ function confirms(frame: ReplayFrame, command: ReplayCommand) {
   }
 }
 
-export function useReplaySocket() {
+export function useReplaySocket(datasetId = 'builtin') {
   const socketRef = useRef<WebSocket | null>(null);
   const frameRef = useRef<ReplayFrame | null>(null);
   const pendingRef = useRef<Pending | null>(null);
@@ -25,6 +25,7 @@ export function useReplaySocket() {
   const [frame, setFrame] = useState<ReplayFrame | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectionDataset, setConnectionDataset] = useState(datasetId);
 
   const clearPending = useCallback(() => {
     window.clearTimeout(deadlineRef.current);
@@ -68,6 +69,7 @@ export function useReplaySocket() {
       socket?.close();
     };
     clearPending();
+    setConnectionDataset(datasetId);
     frameRef.current = null;
     setStatus('connecting');
     setFrame(null);
@@ -76,7 +78,8 @@ export function useReplaySocket() {
     const timer = window.setTimeout(() => {
       // Bound both the handshake and the wait for the first usable server state.
       initialDeadline = window.setTimeout(() => fail('Replay connection timed out. Reconnect to try again.'), 8000);
-      socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/replay`);
+      const query = datasetId === 'builtin' ? '' : `?dataset_id=${encodeURIComponent(datasetId)}`;
+      socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/replay${query}`);
       socketRef.current = socket;
       socket.onopen = () => { if (active) setStatus('connected'); };
       socket.onmessage = event => {
@@ -88,6 +91,7 @@ export function useReplaySocket() {
             setError(message.message);
             return;
           }
+          if ((message.dataset_id ?? 'builtin') !== datasetId) throw new Error('Wrong replay dataset');
           window.clearTimeout(initialDeadline);
           const pending = pendingRef.current;
           if (pending?.kind === 'seek') {
@@ -140,10 +144,11 @@ export function useReplaySocket() {
         if (socketRef.current === socket) socketRef.current = null;
       }
     };
-  }, [attempt, clearPending, write]);
+  }, [attempt, clearPending, write, datasetId]);
 
   const send = useCallback((command: ReplayCommand) => {
-    if (socketRef.current?.readyState !== WebSocket.OPEN || !frameRef.current || pendingRef.current) return false;
+    if (socketRef.current?.readyState !== WebSocket.OPEN || !frameRef.current || pendingRef.current ||
+        (frameRef.current.dataset_id ?? 'builtin') !== datasetId) return false;
     setBusy(true);
     setError(null);
     if (command.type === 'seek') {
@@ -153,7 +158,9 @@ export function useReplaySocket() {
     }
     pendingRef.current = { kind: 'command', command };
     return write(command);
-  }, [write]);
+  }, [write, datasetId]);
 
-  return { frame, status, error, busy, send, reconnect: () => setAttempt(value => value + 1) };
+  const current = connectionDataset === datasetId;
+  return { frame: current ? frame : null, status: current ? status : 'connecting',
+    error: current ? error : null, busy: current && busy, send, reconnect: () => setAttempt(value => value + 1) };
 }

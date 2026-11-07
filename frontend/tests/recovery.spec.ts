@@ -15,7 +15,7 @@ test(`a malformed paused frame (${label}) offers reconnect without another serve
   await expect(page.locator('.vessel-marker')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Reconnect' })).toBeVisible();
   await page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   await page.clock.fastForward(6000);
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
   await expect(page.getByRole('slider')).toHaveValue('0');
@@ -35,7 +35,7 @@ test('an open socket without its first state times out and can reconnect', async
   await page.getByRole('button', { name: 'Reconnect' }).click();
   await expect.poll(() => server.connections()).toBe(2);
   server.send(initial);
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   await page.clock.fastForward(9000); // A successful first frame cancels the new deadline.
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
   expect(server.errors).toEqual([]);

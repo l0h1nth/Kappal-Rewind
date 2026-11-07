@@ -14,23 +14,34 @@ export function App() {
   const [metadataAttempt, setMetadataAttempt] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [libraryRevision, setLibraryRevision] = useState(0);
-  const { frame, status, error, busy, send, reconnect } = useReplaySocket();
+  const [recording, setRecording] = useState({ id: 'builtin', name: 'Built-in assignment' });
+  const [requested, setRequested] = useState(recording);
+  const [switching, setSwitching] = useState(false);
+  const { frame, status, error, busy, send, reconnect } = useReplaySocket(recording.id);
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
     setMetadataError(null);
-    fetch('/api/meta', { signal: controller.signal })
+    setSwitching(true);
+    const url = requested.id === 'builtin' ? '/api/meta' : `/api/replay/${encodeURIComponent(requested.id)}/meta`;
+    fetch(url, { signal: controller.signal })
       .then(async response => {
-        if (!response.ok) throw new Error('Dataset metadata could not be loaded.');
-        const parsed = parseMetadata(await response.json());
-        if (active) setMetadata(parsed);
+        const body = await response.json();
+        if (!response.ok) throw new Error(typeof body?.detail === 'string' ? body.detail : 'Dataset metadata could not be loaded.');
+        if (requested.id !== 'builtin' && body.dataset_id !== requested.id) throw new Error('Wrong recording metadata received.');
+        const parsed = parseMetadata(body);
+        if (active) {
+          setMetadata(parsed); setRecording(requested);
+          if (requested.id !== recording.id) setSelected(null);
+          setSwitching(false);
+        }
       })
-      .catch(() => { if (active) setMetadataError('Dataset metadata could not be loaded. Check the backend and retry.'); })
+      .catch(failure => { if (active) { setMetadataError(`Dataset metadata could not be loaded. ${failure instanceof Error ? failure.message : 'Check the backend and retry.'}`); setSwitching(false); } })
       .finally(() => window.clearTimeout(timeout));
     return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
-  }, [metadataAttempt]);
+  }, [metadataAttempt, requested]);
 
   const time = frame ? istTime(frame.timestamp) : '—';
   const date = frame ? new Date(frame.timestamp).toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) : 'Recorded vessel tracks';
@@ -43,22 +54,31 @@ export function App() {
       <div className={`connection ${status}`} role="status" aria-label="Replay connection"><span className="connection-dot" />{status}</div>
     </header>
     <div className="map-caption"><p className="eyebrow">VESSEL REPLAY</p><p className="recording-date">{date}</p></div>
+    <div className="recording-choice">
+      <p aria-label="Current recording">Current recording: <strong>{recording.name}</strong> · {recording.id === 'builtin' ? 'Built-in' : recording.id}</p>
+      <button disabled={recording.id === 'builtin' && !switching}
+        onClick={() => setRequested({ id: 'builtin', name: 'Built-in assignment' })}>Replay built-in assignment</button>
+    </div>
+    {switching && metadata && <p role="status">Loading recording… Current replay continues until metadata is ready.</p>}
+    {metadataError && metadata && <div className="notice" role="alert"><span>{metadataError} Current replay was kept.</span>
+      <button onClick={() => setMetadataAttempt(value => value + 1)}>Retry recording</button></div>}
     {(status === 'disconnected' || status === 'error') && <div className="notice" role="alert">
       <span>{error ?? 'Replay disconnected. Current positions have been cleared.'}</span>
       <button onClick={reconnect}>Reconnect</button><small>A new session starts paused at the beginning.</small>
     </div>}
     {error && status === 'connected' && <p className="notice" role="alert">{error}</p>}
     <div className="workspace">
-      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} /> :
+      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording.id} /> :
         <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
       <VesselPanel selected={selected} frame={frame} connected={status === 'connected'} />
     </div>
-    <Timeline frame={frame} metadata={metadata} connected={status === 'connected'} busy={busy} send={send} />
+    <Timeline key={recording.id} frame={frame} metadata={metadata} connected={status === 'connected'} busy={busy} send={send} />
     <footer>
       <span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : 'Waiting for replay state'}</span>
       <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span>
     </footer>
     <UploadCsv onImported={() => setLibraryRevision(value => value + 1)} />
-    <DatasetLibrary revision={libraryRevision} />
+    <DatasetLibrary revision={libraryRevision} activeDatasetId={recording.id} selecting={switching}
+      onReplay={item => setRequested({ id: item.dataset_id, name: item.original_filename })} />
   </main>;
 }

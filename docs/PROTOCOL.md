@@ -14,12 +14,12 @@ Send one JSON text object per command, with exactly these fields:
 {"type":"reset"}
 ```
 
-- `second`: integer 0–1799 for this recording; no rounding or clamping invalid input.
+- `second`: integer 0–(duration_seconds−1) for the selected recording; no rounding or clamping invalid input.
 - `speed`: integer 1, 2, 5 or 10; booleans, strings and fractional values are rejected.
 - Play resumes from the fractional position. Pause freezes it. Speed changes preserve
   the current position. Seek moves immediately and preserves playing/paused state,
   except seeking to the final second pauses. Reset seeks to 0 and pauses, retaining speed.
-- At 1799 playback stops. Play at the end stays paused; seek/reset before replaying.
+- At the final second playback stops. Play at the end stays paused; seek/reset before replaying.
 
 Server sends a state immediately on connect and after every valid command. While
 playing it checks progress every 100 ms, sending only changed seconds/state, at
@@ -29,7 +29,7 @@ of missed seconds. Command responses are immediate and outside that automatic ca
 State envelope (vessels omitted here to show the shape):
 
 ```json
-{"type":"state","second":600,"duration_seconds":1800,"playing":false,
+{"type":"state","dataset_id":"builtin","second":600,"duration_seconds":1800,"playing":false,
  "speed":1,"timestamp":"2026-11-02T03:40:00Z","vessels":[]}
 ```
 
@@ -62,3 +62,25 @@ ends the connection; closing is also bounded. Commands wait behind that active s
 so a stalled client is disconnected rather than guaranteed prompt service. There is
 no replay task left running after disconnect. Uvicorn WebSocket ping/pong keeps
 otherwise idle connections alive through Nginx's 75-second proxy read timeout.
+
+## E3 — select a recording when connecting
+
+Omit the query for the original assignment, or connect to
+`/ws/replay?dataset_id=builtin`. For an upload, use `/ws/replay?dataset_id=UUID`
+(the server-issued 32 lowercase hex ID). Each socket owns its selected store,
+clock and window cache; every new connection starts paused at 0, speed 1.
+State frames include `dataset_id`; commands are unchanged. `/api/meta` keeps its
+original response. `GET /api/replay/{dataset_id}/meta` returns selected UTC
+start/end, recording_seconds, counts, bounds, vessel_ids, dataset_id and name.
+Malformed IDs return HTTP 422, unknown IDs 404, unusable Parquet a generic 500.
+Invalid socket selections receive an error and close code 1008, leaving other
+clients untouched. File failures during replay end that connection with an error.
+
+The UI preflights metadata while current playback continues. Failure preserves
+that session and selection. Success closes the old socket, clears selected vessel,
+markers/trails and timeline draft, refits the existing map and opens a fresh paused
+socket. Cancelled metadata requests and detached socket callbacks are ignored;
+frames must match the selected ID. Selecting the currently loaded recording while
+another loads cancels that request and keeps the existing session. Reconnect
+always starts fresh. Bounds update only on dataset change; ordinary frames retain
+user pan/zoom. The UI accepts missing frame identity only for legacy builtin frames.

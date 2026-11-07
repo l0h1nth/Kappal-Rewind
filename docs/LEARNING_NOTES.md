@@ -158,3 +158,29 @@ not establish that the full multipart upload had completed.
 Interview questions: Why is filename an unsafe identity even without malicious
 input? Why can metadata list quickly while preview needs a SQL query? Why does a
 LIMIT bound Python results without guaranteeing that DuckDB reads only 20 rows?
+
+## E3 — multi-dataset replay
+
+- [TrackStore](../backend/app/track_store.py) is a small structural interface:
+  memory indexes and Parquet supply the same typed observations to
+  [build_frame](../backend/app/replay.py). Clock, gap splitting and trails remain shared.
+- SQL BETWEEN binds aware UTC start/end, selects all vessels together and sorts
+  timestamp/ID. Aggregate metadata is small; only a 60-second result enters Python.
+  A query can still scan a whole small Parquet file. See [DuckDB Parquet](https://duckdb.org/docs/data/parquet).
+- A socket owns its store, monotonic clock and exact-window cache. Identical windows
+  reuse one tuple; a new window replaces it, including backward seeks. A new socket
+  creates a new cache. This bounds retained history, not concurrent client count.
+- [App](../frontend/src/App.tsx) preflights dynamic metadata before committing an ID;
+  [useReplaySocket](../frontend/src/hooks/useReplaySocket.ts) closes/detaches old
+  listeners, clears deadlines and verifies frame identity. Active guards reject
+  delayed callbacks; the server remains the only playback clock.
+- Leaflet MapContainer props are immutable after initialization.
+  [VesselMap](../frontend/src/components/VesselMap.tsx) uses useMap().fitBounds only
+  on ID changes; the existing map keeps user pan/zoom across frames. See
+  [React Leaflet API](https://react-leaflet.js.org/docs/api-map/).
+
+Interview questions: Why query one time window instead of one query per vessel?
+Why does opening a new socket simplify cache/session isolation? Why check identity
+as well as close the old socket? What remains costly despite bounded Python rows?
+Study test_track_store.py and switching.spec.ts for gaps, stale callbacks and
+cancelling an in-flight switch back to the current recording.

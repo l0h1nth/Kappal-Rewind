@@ -48,7 +48,9 @@ function RecordingDetails({ id }: { id: string }) {
   </section>;
 }
 
-export function DatasetLibrary({ revision }: { revision: number }) {
+export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selecting = false, onReplay }: {
+  revision: number; activeDatasetId?: string; selecting?: boolean; onReplay?: (recording: Recording) => void;
+}) {
   const [refresh, setRefresh] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export function DatasetLibrary({ revision }: { revision: number }) {
   }, [refresh, revision]);
   return <section className="dataset-library" aria-label="My Recordings">
     <div className="library-header"><h2>My Recordings</h2><button onClick={() => setRefresh(value => value + 1)}>Refresh recordings</button></div>
-    <p>Uploaded recordings only · read-only · times shown in Asia/Kolkata (IST). The assignment replay remains separate.</p>
+    <p>Uploaded recordings · times shown in Asia/Kolkata (IST). Details are read-only; Replay opens a fresh paused session.</p>
     {loading ? <p role="status">Loading recordings…</p> : error ? <p role="alert">{error}</p> : !recordings.length ?
       <p>No uploaded recordings yet. Upload a CSV to add one.</p> : <ul className="recording-list">
         {recordings.map(recording => <li key={recording.dataset_id}>
@@ -84,6 +86,9 @@ export function DatasetLibrary({ revision }: { revision: number }) {
           <p>Imported · IST: {recording.imported_at ? istDateTime(recording.imported_at) : 'Unknown (E1 import)'}</p>
           <button aria-label={`View details for ${recording.original_filename} (${recording.dataset_id.slice(0, 8)})`}
             aria-expanded={selected === recording.dataset_id} onClick={() => setSelected(recording.dataset_id)}>View details</button>
+          {onReplay && <button className="recording-replay" disabled={recording.dataset_id === activeDatasetId && !selecting}
+            aria-label={`Replay ${recording.original_filename} (${recording.dataset_id.slice(0, 8)})`}
+            onClick={() => onReplay(recording)}>{recording.dataset_id === activeDatasetId ? 'Currently loaded' : 'Replay'}</button>}
         </li>)}
       </ul>}
     {!loading && selected && !error && <>

@@ -65,7 +65,7 @@ export function UploadCsv({ onImported }: { onImported?: () => void }) {
 
   return <details className="upload-section">
     <summary>Upload CSV</summary>
-    <p>Store a validated recording for later use. Playback continues with the assignment dataset.</p>
+    <p>Store a validated recording. Uploading does not change the current replay.</p>
     <p className="upload-help">UTF-8 CSV · up to 10 MiB / 50,000 rows · one import at a time. Naive times use the server timezone (Asia/Kolkata by default).</p>
     <form onSubmit={submit}>
       <label>CSV file<input type="file" accept=".csv,text/csv" disabled={uploading}
@@ -80,7 +80,7 @@ export function UploadCsv({ onImported }: { onImported?: () => void }) {
       <p>{result.accepted_row_count} accepted rows / {result.validation.source_row_count} source rows · {result.vessel_count} vessels · {result.duration_seconds} recorded seconds</p>
       <p>{result.start} → {result.end}</p>
       <p>{result.validation.discarded_row_count} duplicate rows discarded · {result.validation.heading_normalizations} headings normalized · {result.validation.missing_observation_seconds} missing vessel-seconds</p>
-      <p>Naive timestamp timezone: {result.validation.naive_timezone}. Saved as Parquet; playback dataset unchanged.</p>
+      <p>Naive timestamp timezone: {result.validation.naive_timezone}. Saved as Parquet; current replay unchanged.</p>
     </div>}
   </details>;
 }

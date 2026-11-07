@@ -1,10 +1,11 @@
-"""Monotonic replay clock and deterministic frames; no networking or file I/O."""
+"""Monotonic replay clock and deterministic frames over a read-only track source."""
 
 from collections.abc import Callable
 from datetime import timedelta
 from time import monotonic
 
 from app.ingestion import Dataset
+from app.track_store import MemoryTrackStore, TrackStore
 
 SUPPORTED_SPEEDS = (1, 2, 5, 10)
 
@@ -73,13 +74,17 @@ class ReplaySession:
             self.playing = False
 
 
-def build_frame(dataset: Dataset, session: ReplaySession) -> dict:
+def build_frame(dataset: Dataset | TrackStore, session: ReplaySession) -> dict:
+    store = MemoryTrackStore(dataset) if isinstance(dataset, Dataset) else dataset
     state = session.snapshot()  # Sample the clock once for a consistent frame.
     second = state["second"]
-    timestamp = dataset.start + timedelta(seconds=second)
-    window = [dataset.start + timedelta(seconds=i) for i in range(max(0, second - 59), second + 1)]
+    timestamp = store.start + timedelta(seconds=second)
+    window = [store.start + timedelta(seconds=i) for i in range(max(0, second - 59), second + 1)]
+    tracks = {}
+    for observation in store.get_window(window[0], timestamp):
+        tracks.setdefault(observation.track_id, {})[observation.timestamp] = observation
     vessels = []
-    for vessel_id, track in dataset.observations.items():
+    for vessel_id, track in sorted(tracks.items()):
         current = track.get(timestamp)
         if current is None:
             continue  # No current observation means no current marker or vessel entry.
@@ -98,5 +103,5 @@ def build_frame(dataset: Dataset, session: ReplaySession) -> dict:
         vessels.append({"id": vessel_id, "lat": current.lat, "lon": current.lon,
                         "speed_knots": current.speed_knots, "heading": current.heading,
                         "trail_segments": segments})
-    return {"type": "state", **state, "timestamp": timestamp.isoformat().replace("+00:00", "Z"),
+    return {"type": "state", "dataset_id": store.dataset_id, **state, "timestamp": timestamp.isoformat().replace("+00:00", "Z"),
             "vessels": vessels}

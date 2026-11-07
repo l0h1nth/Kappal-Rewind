@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { setup, initial, metadata, vessel } from './fixtures';
+import { setup, initial, metadata, vessel, settledMapView } from './fixtures';
 
 test('metadata fits real bounds, markers point north/east, selection and play/pause work', async ({ page }) => {
   const server = await setup(page);
@@ -27,10 +27,10 @@ test('metadata fits real bounds, markers point north/east, selection and play/pa
   await map.getByTitle('Vessel T012').press('Space');
   await expect(page.locator('footer')).toContainText('T012 selected');
   await expect(map.getByRole('link', { name: 'OpenStreetMap' })).toBeVisible();
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   await page.getByRole('button', { name: 'Pause' }).click();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   expect(server.commands).toEqual([{ type: 'play' }, { type: 'pause' }]);
   expect(server.connections()).toBe(1); // StrictMode is enabled by the dev server.
   expect(server.errors).toEqual([]);
@@ -55,7 +55,7 @@ test('frames move markers, replace trails, preserve pan/zoom and remove missing 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2 + 50, { steps: 8 }); await page.mouse.up();
   await expect(page.locator('.leaflet-map-pane')).not.toHaveClass(/leaflet-pan-anim/);
-  const view = await page.locator('.leaflet-map-pane').getAttribute('style');
+  const view = await settledMapView(page);
   // Backward seek: frame is the complete replacement, without old future segments.
   server.send(initial);
   await expect(page.locator('path.vessel-trail')).toHaveCount(2);
@@ -79,7 +79,7 @@ test('command errors preserve state; disconnect clears positions and reconnect s
   server.close();
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('disconnected');
   await expect(page.locator('.vessel-marker')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Play' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Reconnect' }).click();
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
   await expect(page.locator('time[aria-label="Current replay time"]')).toHaveText('09:00:00');
@@ -114,5 +114,5 @@ test('tile errors stay visible and a mobile viewport has no horizontal overflow'
   await setup(page, { tileError: true });
   await expect(page.getByRole('alert')).toContainText('Some map tiles could not load');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeVisible();
 });

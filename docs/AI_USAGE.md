@@ -159,3 +159,21 @@ this file records contributions and reviewer scope.
   checks with mocked map tiles. A shared Vite shutdown interrupted the first expanded
   browser run; isolated rerun passed. Temporary visual captures were inspected;
   no new submission screenshot, human verification, performance claim or commit/push.
+
+## E3 — 8 Nov 2026
+- Codex implemented TrackStore adapters, bounded Parquet replay, per-connection
+  dataset selection, metadata preflight and React switching lifecycle/tests/docs.
+  Applied replay-verification and build-journal skills; retained source/volume data.
+- Consulted official [DuckDB Python API](https://duckdb.org/docs/stable/clients/python/reference/),
+  [Parquet querying](https://duckdb.org/docs/data/parquet) and
+  [React Leaflet map API](https://react-leaflet.js.org/docs/api-map/).
+- Independent data reviewer compared source/store frames at gap/window boundaries
+  and reproduced the corrupted-value preflight issue; re-review passed three fix
+  regressions. Replay reviewer ran 56 regressions, synthetic parity and multi-dataset
+  ASGI isolation checks. Release reviewer ran 70 replay/storage tests and source,
+  Compose/whitespace checks; final documentation re-review and independent real
+  two-upload Nginx smoke passed, with rebuilt services healthy and source unchanged.
+- Codex ran 174 backend/29 Firefox tests, build, Docker rebuild and real Nginx
+  default/two-upload WebSocket checks plus actual-backend Firefox switching with
+  mocked tiles. Initial browser harness failures were corrected without changing
+  playback assertions. No human verification, scaling measurement or publishing claimed.

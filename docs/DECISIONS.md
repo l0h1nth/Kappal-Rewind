@@ -126,3 +126,20 @@
 - **Tradeoff:** lookup/list work grows with stored files. Bounded metadata reads and
   SQL LIMIT 20–100 keep individual payloads small; they do not eliminate Parquet scan
   work. Skip unusable metadata; report preview failures without modifying files.
+
+## E3 — shared frame builder over two small track stores
+- **Decision:** TrackStore exposes metadata and one all-vessel UTC time window.
+  MemoryTrackStore adapts the assignment indexes; ParquetTrackStore performs
+  parameterized BETWEEN/ORDER BY queries. The existing clock/trail builder serves both.
+- **Reason:** exact recorded values and gap behavior stay in one implementation;
+  Python receives only the current inclusive 60-second window for uploads.
+- **Alternative:** eagerly load every upload, query separately per vessel, or add
+  a mutable dataset-switch command. A dataset ID on a new socket gives clear
+  session/cache ownership and preserves the default protocol.
+- **Tradeoff:** metadata preflight and socket initialization each aggregate-scan
+  the file; SQL connections open/close per uncached window. One exact-window tuple
+  per session avoids same-second reads and is replaced on any window change;
+  nothing accumulates across seeks or sessions. Queries run off the event loop,
+  with one DuckDB thread, a 128 MiB engine limit and no disk spill. Cancellation
+  may leave an already-running bounded worker query finishing. This is the E1
+  small-recording limit, not measured scalable or memory-streaming ingestion.

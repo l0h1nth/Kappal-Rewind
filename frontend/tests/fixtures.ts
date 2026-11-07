@@ -54,7 +54,7 @@ export async function setup(page: Page, options: { metadataError?: boolean; tile
   });
   await page.goto('/');
   if (options.sendInitial === false) await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
-  else await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  else await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   return { send: (frame: unknown) => {
       if (typeof frame === 'object' && frame !== null && 'type' in frame && frame.type === 'state') state = frame as ReplayFrame;
       socket.send(JSON.stringify(frame));
@@ -63,3 +63,17 @@ export async function setup(page: Page, options: { metadataError?: boolean; tile
     close: () => socket.close(), connections: () => connections, commands, errors };
 }
 
+
+// Leaflet can schedule inertia just after pointerup; sample a settled view.
+export async function settledMapView(page: Page) {
+  let previous: string | null = null, unchanged = 0;
+  await expect.poll(async () => {
+    const pane = page.locator('.leaflet-map-pane');
+    const style = await pane.getAttribute('style');
+    const animated = /leaflet-pan-anim|leaflet-zoom-anim/.test(await pane.getAttribute('class') ?? '');
+    unchanged = style === previous && !animated ? unchanged + 1 : 0;
+    previous = style;
+    return unchanged;
+  }, { intervals: [100] }).toBeGreaterThanOrEqual(3);
+  return previous!;
+}

@@ -15,6 +15,7 @@ export interface Vessel {
 
 export interface ReplayFrame {
   type: 'state';
+  dataset_id?: string; // Missing on legacy default/built-in frames only.
   second: number;
   duration_seconds: number;
   playing: boolean;
@@ -49,6 +50,7 @@ function validVessel(v: unknown): v is Vessel {
 export function parseReplayMessage(v: unknown): ReplayFrame | { type: 'error'; message: string } {
   if (object(v) && v.type === 'error' && typeof v.message === 'string') return { type: 'error', message: v.message };
   if (object(v) && v.type === 'state' && integer(v.second) && integer(v.duration_seconds) &&
+      (v.dataset_id === undefined || v.dataset_id === 'builtin' || (typeof v.dataset_id === 'string' && /^[0-9a-f]{32}$/.test(v.dataset_id))) &&
       v.second >= 0 && v.second < v.duration_seconds && typeof v.playing === 'boolean' &&
       [1, 2, 5, 10].includes(v.speed as number) && instant(v.timestamp) &&
       Array.isArray(v.vessels) && v.vessels.every(validVessel) &&

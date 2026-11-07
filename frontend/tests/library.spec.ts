@@ -110,7 +110,7 @@ test('preview failure leaves metadata and playback available', async ({ page }) 
   const details = page.getByRole('region', { name: 'Recording details', exact: true });
   await expect(details).toContainText('duplicate.csv');
   await expect(details.getByRole('alert')).toContainText('Preview could not be loaded');
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   expect(replay.connections()).toBe(1);
   expect(replay.errors).toEqual([]);
@@ -123,7 +123,7 @@ test('successful upload automatically refreshes library without resetting replay
     if (route.request().method() === 'POST') { stored = true; return route.fulfill({ status: 201, json: recording() }); }
     return route.fulfill({ json: stored ? [recording()] : [] });
   });
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   await page.getByLabel('CSV file').setInputFiles({ name: 'duplicate.csv', mimeType: 'text/csv', buffer: Buffer.from('test') });
   await page.getByRole('button', { name: 'Upload and store' }).click();

@@ -17,7 +17,7 @@ async function rangeInput(page: Page, value: number) {
 
 test('play/pause, all supported speeds and reset use confirmed state without resetting time', async ({ page }) => {
   const server = await setup(page);
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   server.send(stateAt(100, true));
   await expect(clock(page)).toHaveText('09:01:40');
@@ -28,7 +28,7 @@ test('play/pause, all supported speeds and reset use confirmed state without res
     await expect(clock(page)).toHaveText('09:01:40');
   }
   await page.getByRole('button', { name: 'Pause' }).click();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Reset' }).click();
   await expect(clock(page)).toHaveText('09:00:00');
   await expect(page.getByRole('slider')).toHaveValue('0');
@@ -47,11 +47,11 @@ test('seek forward/backward and native keyboard boundaries stop correctly at the
   await expect(page.getByRole('slider')).toBeEnabled();
   await page.getByRole('slider').press('End');
   await expect(clock(page)).toHaveText('09:29:59');
-  await expect(page.getByRole('button', { name: 'Play' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeDisabled();
   await expect(page.getByRole('region', { name: 'Playback controls' })).toContainText('Finished');
   await page.getByRole('slider').press('Home');
   await expect(clock(page)).toHaveText('09:00:00');
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   expect(server.commands).toEqual([600, 20, 1799, 0].map(second => ({ type: 'seek', second })));
 });
 
@@ -60,6 +60,7 @@ test('dragging ignores live slider updates and uses a pause/seek/resume acknowle
   server.send(stateAt(100, true));
   await expect(page.getByRole('slider')).toHaveValue('100');
   const slider = page.getByRole('slider');
+  await slider.scrollIntoViewIfNeeded();
   const box = (await slider.boundingBox())!;
   await page.mouse.move(box.x + 8 + (box.width - 16) * 100 / 1799, box.y + box.height / 2);
   await page.mouse.down();
@@ -173,7 +174,7 @@ test('disconnect cancels pending seek and reconnect does not retain its draft or
   await expect(page.getByRole('button', { name: 'Reconnect' })).toBeVisible();
   await expect(page.getByRole('slider')).toHaveValue('0');
   await page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   await page.clock.fastForward(6000);
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
   await expect(page.getByRole('slider')).toBeEnabled();

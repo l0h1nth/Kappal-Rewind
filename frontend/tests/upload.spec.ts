@@ -26,7 +26,7 @@ test('upload progress and validation leave the replay session unchanged', async 
   await expect(page.locator('.upload-section')).toContainText('other.csv');
   await page.getByRole('button', { name: 'Upload and store' }).click();
   await expect(page.getByRole('button', { name: 'Uploading…' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Play' }).click();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   release();
   await expect(page.locator('.upload-result')).toContainText('2 accepted rows / 3 source rows');
@@ -61,7 +61,7 @@ test('upload errors are local and selecting another file clears them', async ({ 
   await upload.click();
   await expect(alert).toBeVisible();
   await expect(upload).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   expect(replay.connections()).toBe(1);
   expect(replay.errors).toEqual([]);
 });
