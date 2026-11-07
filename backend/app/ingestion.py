@@ -4,12 +4,16 @@ import csv
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from pathlib import Path
 
-from app.csv_format import COLUMNS, parse_timestamp
+from app.csv_format import COLUMNS, IST, parse_timestamp
 
 SECOND = timedelta(seconds=1)
+
+
+class DatasetLimitError(ValueError):
+    """An import exceeds a configured resource limit, rather than invalid values."""
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,7 @@ class Dataset:
     source_rows: int
     heading_360_rows: int
     discarded: list[DiscardedObservation]
+    naive_timestamp_rows: int = 0
 
     @property
     def vessel_ids(self) -> list[str]:
@@ -73,7 +78,7 @@ def distance_m(left: Observation, right: Observation) -> float:
     return 2 * 6_371_000 * math.asin(math.sqrt(min(1.0, max(0.0, h))))
 
 
-def _parse_row(row: list[str], line: int) -> Observation:
+def _parse_row(row: list[str], line: int, naive_timezone: tzinfo = IST) -> Observation:
     def invalid(message: str):
         raise ValueError(f"CSV line {line}: {message}")
 
@@ -86,7 +91,7 @@ def _parse_row(row: list[str], line: int) -> Observation:
     if not vessel.isprintable() or any(c.isspace() for c in vessel):
         invalid("track_id must be printable and contain no whitespace")
     try:
-        timestamp = parse_timestamp(row[1])
+        timestamp = parse_timestamp(row[1], naive_timezone=naive_timezone)
     except (ValueError, OverflowError) as error:
         invalid(f"timestamp: {error}")
     if timestamp.microsecond:
@@ -137,7 +142,8 @@ def _resolve_block(
     return complete[0][1]
 
 
-def _resolve_track(groups: dict[datetime, list[Observation]], discarded: list) -> dict:
+def _resolve_track(groups: dict[datetime, list[Observation]], discarded: list,
+                   max_conflict_candidates: int | None = None) -> dict:
     times = sorted(groups)
     unique = {}
     for timestamp in times:
@@ -161,9 +167,12 @@ def _resolve_track(groups: dict[datetime, list[Observation]], discarded: list) -
         while (stop < len(times) and times[stop] - times[stop - 1] == SECOND
                and len(unique[times[stop]]) > 1):
             stop += 1
-        before = selected.get(timestamp - SECOND)
-        after_group = unique.get(times[stop - 1] + SECOND, [])
+        before = selected.get(times[index - 1]) if index and timestamp - times[index - 1] == SECOND else None
+        after_group = unique[times[stop]] if stop < len(times) and times[stop] - times[stop - 1] == SECOND else []
         after = after_group[0] if len(after_group) == 1 else None
+        if (max_conflict_candidates is not None and
+                sum(len(unique[t]) for t in times[index:stop]) > max_conflict_candidates):
+            raise DatasetLimitError(f"conflicting interval exceeds {max_conflict_candidates} candidates; split the recording")
         chosen = _resolve_block([unique[t] for t in times[index:stop]], before, after)
         for obs in chosen:
             selected[obs.timestamp] = obs
@@ -176,10 +185,11 @@ def _resolve_track(groups: dict[datetime, list[Observation]], discarded: list) -
     return selected
 
 
-def load_dataset(path: Path) -> Dataset:
+def load_dataset(path: Path, *, naive_timezone: tzinfo = IST, max_rows: int | None = None,
+                 max_conflict_candidates: int | None = None) -> Dataset:
     """Fail on the first invalid row or unresolved conflict; return no partial dataset."""
     grouped = defaultdict(lambda: defaultdict(list))
-    source_rows = heading_360_rows = 0
+    source_rows = heading_360_rows = naive_timestamp_rows = 0
     with path.open(newline="", encoding="utf-8") as source:
         reader = csv.reader(source, strict=True)
         try:
@@ -190,8 +200,11 @@ def load_dataset(path: Path) -> Dataset:
                 row = next(reader, None)
                 if row is None:
                     break
-                obs = _parse_row(row, line)
+                if max_rows is not None and source_rows >= max_rows:
+                    raise DatasetLimitError(f"CSV exceeds {max_rows} source rows; split the recording")
+                obs = _parse_row(row, line, naive_timezone)
                 source_rows += 1
+                naive_timestamp_rows += not (row[1].endswith("Z") or row[1][-6:-5] in ("+", "-"))
                 heading_360_rows += obs.heading == 360
                 if obs.heading == 360:
                     obs = Observation(obs.track_id, obs.timestamp, obs.lat, obs.lon,
@@ -202,16 +215,21 @@ def load_dataset(path: Path) -> Dataset:
     if not grouped:
         raise ValueError("CSV line 1: no observations")
     discarded = []
-    tracks = {vessel: _resolve_track(grouped[vessel], discarded) for vessel in sorted(grouped)}
+    tracks = {vessel: _resolve_track(grouped[vessel], discarded, max_conflict_candidates) for vessel in sorted(grouped)}
     start = min(next(iter(track)) for track in tracks.values())
     end = max(next(reversed(track)) for track in tracks.values())
     gaps = {}
     for vessel, track in tracks.items():
-        boundaries = [start - SECOND, *track, end + SECOND]
-        gaps[vessel] = [Gap(left + SECOND, right - SECOND, int((right - left).total_seconds()) - 1)
-                        for left, right in zip(boundaries, boundaries[1:]) if right - left > SECOND]
+        times = list(track)
+        gaps[vessel] = []
+        if times[0] > start:
+            gaps[vessel].append(Gap(start, times[0] - SECOND, int((times[0] - start).total_seconds())))
+        gaps[vessel].extend(Gap(left + SECOND, right - SECOND, int((right - left).total_seconds()) - 1)
+                            for left, right in zip(times, times[1:]) if right - left > SECOND)
+        if times[-1] < end:
+            gaps[vessel].append(Gap(times[-1] + SECOND, end, int((end - times[-1]).total_seconds())))
     accepted = [obs for track in tracks.values() for obs in track.values()]
     bounds = {"south": min(o.lat for o in accepted), "north": max(o.lat for o in accepted),
               "west": min(o.lon for o in accepted), "east": max(o.lon for o in accepted)}
     return Dataset(tracks, gaps, start, end, bounds, source_rows, heading_360_rows,
-                   sorted(discarded, key=lambda entry: entry.observation.source_line))
+                   sorted(discarded, key=lambda entry: entry.observation.source_line), naive_timestamp_rows)

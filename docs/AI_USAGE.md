@@ -121,3 +121,24 @@ this file records contributions and reviewer scope.
   each and no browser errors. General re-review independently reran 17 browser
   tests, build/typecheck and whitespace checks; no unresolved findings. No new web
   resources consulted and no human verification claimed.
+
+## E1 — 7 Nov 2026
+- Codex implemented bounded multipart import, shared configurable normalization,
+  typed DuckDB/Parquet I/O, atomic metadata publication, Docker volume and minimal
+  React upload UI/tests. Used local csv-audit/build-journal skills; kept original
+  source and replay dataset intact. No commit/push or final submission preparation.
+- Consulted official [FastAPI uploads](https://fastapi.tiangolo.com/tutorial/request-files/),
+  [Starlette request limits](https://starlette.dev/requests/), local pinned Starlette
+  parser/body-limit source and [DuckDB Python API](https://duckdb.org/docs/stable/clients/python/reference/).
+  A direct DuckDB TIMESTAMPTZ fetch required optional pytz; explicit SQL UTC string
+  conversion avoided adding it, while retaining timezone-aware Parquet timestamps.
+- Independent data reviewer reproduced extreme-date overflow, advised DST/work
+  limits and verified full Parquet fidelity including extreme doubles/Unicode IDs.
+  Replay reviewer independently compared all 1,800 frames to HEAD. Release reviewer
+  reproduced truncated multipart acceptance; Codex fixed it with closed-spool
+  regression evidence. Re-review passed 25 upload tests and 19 Chromium tests.
+- Codex executed backend/build/browser, Docker/volume-recreation and real-backend
+  upload/playback checks; UI tiles were mocked. Firefox installation was needed in
+  this session; all 19 Firefox tests passed, independently repeated by the replay reviewer. Final
+  release documentation review found no issues. No human verification or measured
+  performance improvement is claimed.

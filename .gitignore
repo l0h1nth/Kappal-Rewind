@@ -12,3 +12,4 @@ playwright-report/
 *.pdf
 *.log
 .DS_Store
+uploads/

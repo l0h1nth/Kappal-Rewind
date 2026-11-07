@@ -37,6 +37,10 @@ Run `uvicorn app.main:app --reload` from `backend` with the venv activated, and
 `npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` and `/ws` to :8000. Browser tests mock frames/tiles; real Docker
 checks are recorded separately. OSM tiles require internet; zoom to separate nearby markers.
 
+Optional **E1 upload/storage** adds a CSV import section; imported datasets do not
+replace the assignment replay. Limits, timezone configuration, persistent volume
+and a DuckDB query: [CSV imports](docs/DATASETS.md).
+
 ## Data problems found
 35,820 rows become 35,780 validated observations across 20 vessels / 1,800 seconds.
 Naive timestamps assume IST and normalize to UTC; 11 headings of 360° become 0°.

@@ -112,3 +112,26 @@ next frame? Why must an error packet not cancel the first-state deadline?
 Deferred: protocol request IDs, automatic reconnect/session restoration, map
 clustering, storage/rendering optimizations and dependency changes without evidence.
 The current export's cleaning policy and server clock needed no changes.
+
+## E1 — uploaded recordings
+
+- [UploadCsv](../frontend/src/components/UploadCsv.tsx) submits browser FormData;
+  the browser sets the multipart boundary. Server parsing bounds request/file bytes
+  and checks complete envelopes; a worker thread performs validation/storage so the
+  replay event loop remains available.
+- [datasets.py](../backend/app/datasets.py) calls the existing CSV normalizer with an
+  explicit timezone and work limits. Offsets override naive assumptions; duplicates
+  and gaps retain the established policy. Failed staging is removed before retry.
+- [storage.py](../backend/app/storage.py) writes typed, column-oriented Parquet and
+  queries it with embedded DuckDB; complete accepted-row equality gates publication.
+  Temporary canonical CSV is a transport step, not a new source validator.
+- Docker's named volume survives container recreation independently of images.
+  Parquet plus JSON is simple but lacks transactions across multiple datasets,
+  storage quotas and large-file streaming. [Import contract](DATASETS.md) has the
+  actual limits/query; performance improvement has not been measured.
+
+Interview questions: Why does an upload need both a byte limit and a conflict-work
+limit? Why publish the directory only after read-back, rather than writing directly
+to its final UUID? Study the extreme-date and truncated-multipart regression tests:
+normal gap sentinels overflowed at year boundaries; a completed CSV part alone did
+not establish that the full multipart upload had completed.

@@ -104,3 +104,15 @@
   controls disabled with no recovery action. An open socket alone is not usable data.
 - **Tradeoff:** malformed frames require a fresh paused session rather than waiting
   for a later unsolicited frame. Slow initialization can be retried explicitly.
+
+## E1 — one verified Parquet file and JSON metadata per import
+- **Decision:** reuse typed ingestion, then write UTC/numeric Parquet through embedded
+  DuckDB. Verify all accepted rows before atomically renaming a staging directory
+  containing Parquet and metadata on the persistent upload volume.
+- **Reason:** durable normalized recordings and SQL read-back without a metadata
+  database, extra server or a second CSV normalization policy.
+- **Alternative:** retain only CSV, create a DuckDB database per recording, or add
+  pandas/Arrow for transport. A temporary canonical CSV avoids those dependencies.
+- **Tradeoff:** normalization and verification still use memory; conservative import
+  limits bound work. Raw/discarded CSV values are not retained. Atomic publication
+  prevents partial valid datasets; it does not promise power-loss durability.

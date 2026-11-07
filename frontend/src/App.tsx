@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { VesselMap } from './components/VesselMap';
 import { Timeline } from './components/Timeline';
 import { VesselPanel } from './components/VesselPanel';
+import { UploadCsv } from './components/UploadCsv';
 import { istTime } from './format';
 import { useReplaySocket } from './hooks/useReplaySocket';
 import { parseMetadata, type Metadata } from './types';
@@ -55,5 +56,6 @@ export function App() {
       <span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : 'Waiting for replay state'}</span>
       <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span>
     </footer>
+    <UploadCsv />
   </main>;
 }

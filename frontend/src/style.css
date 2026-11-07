@@ -66,6 +66,15 @@ input[type=range]:disabled, input[type=range][aria-disabled=true] { opacity: .4;
 .tile-warning { position: absolute; z-index: 500; top: 0; left: 60px; right: 12px; color: #5a2815; background: #fff1e3; padding: 10px; font-size: 12px; border-radius: 4px; pointer-events: none; }
 footer { min-height: 48px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 12px; color: #a3b7b7; }
 .selection { color: #c8df8d; }
+.upload-section { margin: 0 0 22px; padding: 15px 18px; border: 1px solid #345057; border-radius: 8px; font-size: 13px; }
+.upload-section summary { cursor: pointer; color: #c8df8d; }
+.upload-section p { line-height: 1.6; }
+.upload-section form { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.upload-section label { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.upload-section input[type=file] { max-width: 100%; font: inherit; }
+.upload-help { color: #a3b7b7; }
+.upload-error { color: #ffd8c6; }
+.upload-result { color: #c8df8d; overflow-wrap: anywhere; }
 @media (max-width: 800px) {
   main { padding: 0 12px; }
   .app-header { min-height: 120px; gap: 10px; flex-wrap: wrap; padding: 16px 0; }

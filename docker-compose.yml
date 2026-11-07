@@ -6,8 +6,11 @@ services:
       dockerfile: backend/Dockerfile
     environment:
       TRACKS_CSV: /data/tracks.csv
+      UPLOAD_ROOT: /var/lib/kappal/datasets
+      UPLOAD_NAIVE_TIMEZONE: ${UPLOAD_NAIVE_TIMEZONE:-Asia/Kolkata}
     volumes:
       - ./data:/data:ro
+      - dataset_uploads:/var/lib/kappal/datasets
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
       interval: 5s
@@ -28,3 +31,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+volumes:
+  dataset_uploads:

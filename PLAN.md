@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope ends after Phase 6.
+Python/FastAPI and WebSockets. Current authorized scope is Enhancement E1 only.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -51,13 +51,33 @@ Python/FastAPI and WebSockets. Current authorized scope ends after Phase 6.
 - [x] Verify tests/build, relevant Docker/browser integration, source integrity and concise records.
 - [x] Record review outcomes, remaining limits and deferred improvements; stop before Phase 7.
 
+## Optional enhancements (E1–E5)
+
+Only E1 is authorized. E2–E5 are provisional follow-up scopes, not implemented.
+
+### E1 — CSV upload and Parquet storage
+- [x] Reuse normalization with explicit upload timezone, bounded CSV/multipart/work validation.
+- [x] Atomically store verified Parquet and metadata in a persistent Docker volume.
+- [x] Add minimal upload UI; verify read-back, failure cleanup and original replay regression.
+
+### E2 — Dataset library and preview (deferred)
+- [ ] Define and authorize metadata listing/preview workflow.
+
+### E3 — Dataset selection and replay integration (deferred)
+- [ ] Define and authorize selecting a stored recording for independent replay sessions.
+
+### E4 — Dataset lifecycle (deferred)
+- [ ] Define and authorize deletion/management behavior and active-session safeguards.
+
+### E5 — Enhancement hardening and scaling assessment (deferred)
+- [ ] Review enhanced workflow; measure before larger-file ingestion or partitioning work.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phase 6 engineering review is complete with no unresolved
-actionable findings. Stop here. Final end-to-end
-verification, screenshot, README/repository cleanup and submission preparation
-are reserved for Phase 7.
+**Review gate:** Phases 1–6 are complete. E1 is complete with independent data/replay/release review; stop
+before E2–E5 or Phase 7 final verification, screenshot, repository cleanup and
+submission preparation.

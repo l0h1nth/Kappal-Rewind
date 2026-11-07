@@ -13,3 +13,4 @@ docs
 screenshots
 *.pdf
 .env*
+uploads/

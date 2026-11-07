@@ -79,3 +79,8 @@ The moving sequence lies near T012's surrounding observations (lines 11993 and
 Phase 1 proposed keeping the first conflicting occurrence. Phase 2 supersedes
 that proposal with measured whole-interval continuity; it happens to select the
 same source rows here. No baseline count was corrected.
+
+
+E1 preserves this source and conflict policy. Uploads reuse the loader with an
+explicit configurable naive timezone and conservative resource limits; UTC values
+are compared in full after Parquet read-back. Configuration/report: [CSV imports](DATASETS.md).

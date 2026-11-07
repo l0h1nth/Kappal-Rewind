@@ -1,7 +1,7 @@
 """Shared CSV schema and timestamp policy for audit and ingestion."""
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 
 IST = timezone(timedelta(hours=5, minutes=30))
 COLUMNS = ["track_id", "timestamp", "lat", "lon", "speed_knots", "heading"]
@@ -11,11 +11,15 @@ TIMESTAMP_FORMAT = re.compile(
 )
 
 
-def parse_timestamp(value: str) -> datetime:
-    """Interpret naive export times as IST and return an aware UTC instant."""
+def parse_timestamp(value: str, *, naive_timezone: tzinfo = IST) -> datetime:
+    """Return UTC; existing callers retain IST, uploads supply their configured zone."""
     if not TIMESTAMP_FORMAT.fullmatch(value):
         raise ValueError("expected ISO date and time with seconds (up to 6 fractional digits)")
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=IST)
+        first = parsed.replace(tzinfo=naive_timezone, fold=0)
+        second = parsed.replace(tzinfo=naive_timezone, fold=1)
+        if first.utcoffset() != second.utcoffset():
+            raise ValueError("naive time is ambiguous or nonexistent in the configured timezone; supply an explicit offset")
+        parsed = first
     return parsed.astimezone(timezone.utc)
