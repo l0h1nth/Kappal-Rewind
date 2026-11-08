@@ -3,7 +3,7 @@
 import asyncio
 import json
 import os
-import shutil
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,16 +18,25 @@ from starlette.responses import JSONResponse
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
-from app.ingestion import DatasetLimitError, load_dataset
+from app.ingestion import DatasetLimitError
 from app.catalog import DATASET_ID, StoredDataset, discover_datasets
-from app.storage import normalized_rows, preview_parquet, read_parquet, write_parquet
+from app.storage import preview_parquet
+from app.upload_normalization import normalize_upload
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-MAX_REQUEST_BYTES = 11 * 1024 * 1024  # Includes multipart boundaries/headers.
-MAX_SOURCE_ROWS = 50_000
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_REQUEST_BYTES = 55 * 1024 * 1024  # Includes multipart boundaries/headers.
+MAX_SOURCE_ROWS = 1_000_000
 MAX_CONFLICT_CANDIDATES = 256  # Total across a contiguous conflicting block.
 DEFAULT_UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
 router = APIRouter()
+
+
+class UploadSizeError(MultiPartException):
+    pass
+
+
+class ImportCancelled(Exception):
+    pass
 
 
 class CompleteMultipartParser(MultiPartParser):
@@ -35,6 +44,8 @@ class CompleteMultipartParser(MultiPartParser):
 
     def __init__(self, request: Request):
         self.complete = False
+        self.file_bytes = 0
+        self.byte_limit = request.app.state.upload_max_bytes
 
         async def complete_stream():
             async for chunk in request.stream():
@@ -45,16 +56,32 @@ class CompleteMultipartParser(MultiPartParser):
 
         super().__init__(request.headers, complete_stream(), max_files=1, max_fields=0)
 
+    def on_part_data(self, data: bytes, start: int, end: int) -> None:
+        if self._current_part.file is not None:
+            self.file_bytes += end - start
+            if self.file_bytes > self.byte_limit:
+                raise UploadSizeError(f"CSV exceeds the {self.byte_limit:,}-byte upload limit.")
+        super().on_part_data(data, start, end)
+
     def on_end(self) -> None:
         self.complete = True
 
 
 @asynccontextmanager
 async def upload_form(request: Request):
+    parser = CompleteMultipartParser(request)
     try:
-        form = await CompleteMultipartParser(request).parse()
+        form = await parser.parse()
+    except UploadSizeError as error:
+        raise HTTPException(413, error.message) from error
     except MultiPartException as error:
         raise HTTPException(400, error.message) from error
+    except BaseException:
+        # Starlette closes spools on multipart errors; cancellation/disconnect also
+        # needs cleanup when parsing did not produce a FormData context yet.
+        for spool in parser._files_to_close_on_error:
+            spool.close()
+        raise
     try:
         yield form
     finally:
@@ -65,45 +92,81 @@ def configure_uploads(application) -> None:
     application.state.upload_root = Path(os.environ.get("UPLOAD_ROOT", DEFAULT_UPLOAD_ROOT))
     application.state.upload_timezone = ZoneInfo(os.environ.get("UPLOAD_NAIVE_TIMEZONE", "Asia/Kolkata"))
     application.state.upload_lock = asyncio.Lock()
+    for name, default in [('upload_max_bytes', MAX_UPLOAD_BYTES), ('upload_max_rows', MAX_SOURCE_ROWS)]:
+        value = int(os.environ.get(name.upper(), default))
+        if not 1 <= value <= default:
+            raise ValueError(f'{name.upper()} must be between 1 and {default}')
+        setattr(application.state, name, value)
 
 
-def import_dataset(source: BinaryIO, filename: str, root: Path, naive_timezone: ZoneInfo) -> dict:
+def import_dataset(source: BinaryIO, filename: str, root: Path, naive_timezone: ZoneInfo, *,
+                   max_bytes: int | None = None, max_rows: int | None = None,
+                   cancel: threading.Event | None = None) -> dict:
+    max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
+    max_rows = MAX_SOURCE_ROWS if max_rows is None else max_rows
+    def check_cancel():
+        if cancel is not None and cancel.is_set():
+            raise ImportCancelled('Import cancelled before publication')
     root.mkdir(parents=True, exist_ok=True)
     dataset_id = uuid4().hex
-    # Stage on the same filesystem so a single directory rename publishes both files.
     with TemporaryDirectory(prefix=".import-", dir=root) as temporary:
         staging = Path(temporary)
         csv_path = staging / "source.csv"
+        size = 0
         with csv_path.open("wb") as output:
-            shutil.copyfileobj(source, output, length=64 * 1024)
-        dataset = load_dataset(csv_path, naive_timezone=naive_timezone,
-                               max_rows=MAX_SOURCE_ROWS, max_conflict_candidates=MAX_CONFLICT_CANDIDATES)
-        parquet = staging / "observations.parquet"
-        write_parquet(dataset, parquet)
-        if read_parquet(parquet) != normalized_rows(dataset):
-            raise RuntimeError("Parquet read-back did not match normalized observations")
-        exact = sum(d.reason == "normalized exact duplicate" for d in dataset.discarded)
-        metadata = {
-            "dataset_id": dataset_id, "original_filename": filename,
-            "imported_at": datetime.now(timezone.utc).isoformat(),
-            "vessel_count": len(dataset.observations), "accepted_row_count": dataset.record_count,
-            "start": dataset.start.isoformat(), "end": dataset.end.isoformat(),
-            "duration_seconds": int((dataset.end - dataset.start).total_seconds()) + 1,
-            "validation": {
-                "naive_timezone": naive_timezone.key,
-                "naive_timestamp_rows": dataset.naive_timestamp_rows,
-                "offset_timestamp_rows": dataset.source_rows - dataset.naive_timestamp_rows,
-                "source_row_count": dataset.source_rows, "discarded_row_count": len(dataset.discarded),
-                "exact_duplicate_rows": exact, "conflicting_duplicate_rows": len(dataset.discarded) - exact,
-                "heading_normalizations": dataset.heading_360_rows,
-                "missing_observation_seconds": sum(g.missing_seconds for gaps in dataset.gaps.values() for g in gaps),
-                "gap_count": sum(len(gaps) for gaps in dataset.gaps.values()),
-            },
-        }
+            while chunk := source.read(64 * 1024):
+                check_cancel()
+                size += len(chunk)
+                if size > max_bytes:
+                    raise DatasetLimitError(f'CSV exceeds the {max_bytes:,}-byte upload limit.')
+                output.write(chunk)
+        summary = normalize_upload(csv_path, staging / 'observations.parquet', naive_timezone,
+                                   max_rows, MAX_CONFLICT_CANDIDATES, check_cancel)
+        metadata = {"dataset_id": dataset_id, "original_filename": filename,
+                    "imported_at": datetime.now(timezone.utc).isoformat(), **summary}
         (staging / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-        csv_path.unlink()  # Keep no raw CSV copy; Parquet contains accepted observations.
+        csv_path.unlink()
+        check_cancel()
         staging.rename(root / dataset_id)
     return metadata
+
+
+async def run_import(request: Request, upload: UploadFile, filename: str):
+    cancel = threading.Event()
+    task = asyncio.create_task(run_in_threadpool(
+        import_dataset, upload.file, filename, request.app.state.upload_root, request.app.state.upload_timezone,
+        max_bytes=request.app.state.upload_max_bytes, max_rows=request.app.state.upload_max_rows, cancel=cancel))
+    async def watch_disconnect():
+        while True:
+            message = await request.receive()
+            if message['type'] == 'http.disconnect':
+                cancel.set()
+                return
+
+    monitor = asyncio.create_task(watch_disconnect())
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        cancel.set()
+        # Keep the lock and upload spool alive until the worker has removed staging.
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        if not task.cancelled():
+            task.exception()
+        raise
+    finally:
+        monitor.cancel()
+        await asyncio.gather(monitor, return_exceptions=True)
+
+
+@router.get('/api/upload-limits')
+def upload_limits(request: Request):
+    return {'max_bytes': request.app.state.upload_max_bytes, 'max_rows': request.app.state.upload_max_rows}
 
 
 def published_datasets(root: Path) -> list[StoredDataset]:
@@ -160,11 +223,12 @@ async def upload_dataset(request: Request):
                 raise HTTPException(415, "Choose a CSV filename ending in .csv (at most 255 characters).")
             if not upload.size:
                 raise HTTPException(422, "CSV file is empty.")
-            if upload.size > MAX_UPLOAD_BYTES:
-                raise HTTPException(413, "CSV exceeds the 10 MiB upload limit.")
+            if upload.size > request.app.state.upload_max_bytes:
+                raise HTTPException(413, "CSV exceeds the configured file size limit.")
             try:
-                return await run_in_threadpool(import_dataset, upload.file, filename,
-                                               request.app.state.upload_root, request.app.state.upload_timezone)
+                return await run_import(request, upload, filename)
+            except ImportCancelled as error:
+                raise HTTPException(400, 'Upload disconnected; the unfinished import was cancelled.') from error
             except DatasetLimitError as error:
                 raise HTTPException(413, str(error)) from error
             except UnicodeError as error:

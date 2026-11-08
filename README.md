@@ -37,10 +37,11 @@ Run `uvicorn app.main:app --reload` from `backend` with the venv activated, and
 `npm run dev` from `frontend` for local development at :5173. Vite proxies `/api` and `/ws` to :8000. Browser tests mock frames/tiles; real Docker
 checks are recorded separately. OSM tiles require internet; zoom to separate nearby markers.
 
-Optional **E1–E4** add CSV upload, a persistent My Recordings library, read-only
+Optional **E1–E5a** add CSV upload, a persistent My Recordings library, read-only
 previews and Replay for stored recordings. Switches start paused with dynamic
 time/bounds; return to the built-in assignment above the map. Uploading alone
-keeps the current replay. Confirmed permanent deletion blocks active recordings
+keeps the current replay. Uploads support up to **50 MiB / 1,000,000 source rows**
+with disk-backed normalization. Confirmed permanent deletion blocks active recordings
 (including paused sessions); run one backend worker. Limits, recovery and APIs: [recordings](docs/DATASETS.md).
 
 ## Data problems found

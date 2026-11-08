@@ -161,3 +161,17 @@
   sibling before descriptor-relative unlink/rmdir. No recursive deletion. Failures
   before rename preserve the visible recording; later failures remain hidden for
   manual cleanup. No automatic recovery or power-loss durability is promised.
+
+## E5a — disk-backed upload normalization, shared policy
+- **Decision:** stream raw CSV through the shared validator into canonical rows;
+  use a temporary DuckDB database for sort/exact dedup, then feed bounded batches
+  and conflict blocks to the shared anchored resolver. Verify Parquet multisets
+  in SQL before publishing the unchanged UUID/JSON/Parquet layout.
+- **Reason:** raising limits on the prior in-memory Dataset and full-list read-back
+  would retain multiple million-observation copies. Builtin indexes remain useful
+  and unchanged; a second parser or duplicate-policy implementation would drift.
+- **Tradeoff:** extra canonical files, SQL passes and temporary disk replace Python
+  recording-sized collections. Engine memory settings are not RSS limits. One
+  import retains the lock/spool through cancellation cleanup; SQL stages can finish
+  before a disconnect is observed. Two settings can lower the tested 50 MiB/1M
+  ceilings. No new permanent database, partition scheme or job service is needed.

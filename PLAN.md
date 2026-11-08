@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is Enhancement E4 only.
+Python/FastAPI and WebSockets. Current authorized scope is Enhancement E5a only.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -53,7 +53,7 @@ Python/FastAPI and WebSockets. Current authorized scope is Enhancement E4 only.
 
 ## Optional enhancements (E1–E5)
 
-E1–E4 are complete. E5 remains provisional.
+E1–E4 and E5a are complete. Further scaling work remains deferred.
 
 ### E1 — CSV upload and Parquet storage
 - [x] Reuse normalization with explicit upload timezone, bounded CSV/multipart/work validation.
@@ -78,8 +78,14 @@ E1–E4 are complete. E5 remains provisional.
 - [x] Confirm permanent deletion in the library, handle conflict/pending/error states and preserve other previews/replay.
 - [x] Verify destructive tests only on temporary/isolated storage, Docker restart persistence, regressions and independent reviews.
 
-### E5 — Enhancement hardening and scaling assessment (deferred)
-- [ ] Review enhanced workflow; measure before larger-file ingestion or partitioning work.
+### E5a — 1M-row / 50 MiB uploads
+- [x] Share parsing/conflict policy with disk-backed, bounded-Python upload normalization.
+- [x] Enforce exact byte/row limits, cancellation cleanup and atomic Parquet verification/publication.
+- [x] Expose configured limits, update upload UI and Nginx/Compose without changing playback.
+- [x] Verify 100K/500K/1M and exact boundaries, parity, memory/timing, real Docker replay/import and independent reviews.
+
+### Further E5 scaling work (deferred)
+- [ ] Authorize any wider benchmark, partitioning or infrastructure work separately.
 
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
@@ -87,6 +93,6 @@ E1–E4 are complete. E5 remains provisional.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6 and E1–E4 are complete with independent reviews appropriate to each scope.
-Stop after E4, before E5 or Phase 7 final verification, screenshot, repository cleanup
+**Review gate:** Phases 1–6, E1–E4 and E5a are complete with independent reviews appropriate to each scope.
+Stop after E5a, before further E5 work or Phase 7 final verification, screenshot, repository cleanup
 and submission preparation.

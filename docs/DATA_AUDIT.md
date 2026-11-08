@@ -3,7 +3,8 @@
 Reproduce from the root: `python3 scripts/audit_csv.py` (read-only JSON with CSV
 line evidence). Ingestion: `app.ingestion.load_dataset(Path(...))` from the backend.
 Both use the same schema/timestamp parser; independent grouping and gap tests
-cross-check the source. All cleanup is in memory.
+cross-check the source. Builtin cleanup is in memory; E5a uploads share validation
+and anchored conflict scoring through disk-backed staging.
 
 Original and current source SHA-256:
 `41924aa95b6c6e14e43b9e6120ec7d8efc38a6dd5c36d4ed8a84158f1d5b2568`.
@@ -84,3 +85,12 @@ same source rows here. No baseline count was corrected.
 E1 preserves this source and conflict policy. Uploads reuse the loader with an
 explicit configurable naive timezone and conservative resource limits; UTC values
 are compared in full after Parquet read-back. Configuration/report: [CSV imports](DATASETS.md).
+
+## E5a parity — 8 November 2026
+
+The original source hash/audit counts remain unchanged. The upload path's Parquet
+matched all 35,780 builtin observations, including source-line provenance, gaps
+and discard counts. Independent HEAD/current comparisons also covered shuffled
+anchored intervals, exact aliases, UTF-8 IDs, physical multiline cells and tiny
+fetch boundaries. No new source cleanup policy was introduced. Reproduce with
+`backend/tests/test_datasets.py` and `backend/tests/test_large_uploads.py`.

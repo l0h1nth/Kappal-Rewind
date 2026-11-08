@@ -1,4 +1,4 @@
-# Uploaded recordings — E1–E4
+# Uploaded recordings — E1–E5a
 
 Open **Upload CSV**, or POST one multipart `file` to `/api/datasets`:
 ```sh
@@ -10,11 +10,11 @@ duplicates, heading aliases and missing vessel-seconds). Invalid CSV: 422;
 unsupported file/request type: 415; size/work limit: 413; another import: 409.
 Malformed multipart: 400. Storage errors return a generic 500 without server paths.
 
-Limits: **10 MiB UTF-8 CSV, 50,000 source rows**, exact existing header/order, and
+Limits: **50 MiB (52,428,800 bytes) UTF-8 CSV, 1,000,000 source rows**, exact existing header/order, and
 256 normalized candidates across any contiguous conflicting interval. The entire
-multipart request is capped at 11 MiB in Nginx and the backend, including chunked
-requests. One import runs per backend process; normalization/read-back use memory.
-This is small-recording support, with no month-scale or performance claim.
+multipart request is capped at 55 MiB in Nginx and the backend, including chunked
+requests. One import runs per backend process; upload normalization/read-back use disk-backed staging.
+This is bounded-upload support, with no month-scale guarantee.
 
 `UPLOAD_NAIVE_TIMEZONE` is an IANA zone, default `Asia/Kolkata`; set it before
 `docker compose up`. Explicit timestamp offsets take precedence. Ambiguous or
@@ -81,9 +81,9 @@ Python. Replay queries all vessels once per needed `[max(start,t−59s),t]` wind
 ordered by timestamp/ID. Current fixes require an exact timestamp; gaps stay gaps.
 Only one requested window is cached per connection, replaced on seek/progress;
 no full-recording Python load, per-vessel query or shared active dataset exists.
-DuckDB may scan Parquet rows beyond the returned window; row-group pruning and
-performance have not been benchmarked. Existing 10 MiB/50,000-row import limits
-remain. External file mutation during active replay is unsupported.
+DuckDB may scan Parquet rows beyond the returned window. Row-group pruning has
+not been benchmarked; E5a records limited window timing samples below. The current 50 MiB/1,000,000-row limits
+apply. External file mutation during active replay is unsupported.
 
 Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
 ```sh
@@ -133,3 +133,57 @@ Compose project/volume; never point it at the normal uploaded-recording volume:
 ```
 The script checks active-session conflicts and deletion, leaving one test recording
 for a separate Docker restart/persistence check; it does not provision Compose.
+
+## E5a — larger uploads and measured limits
+
+`UPLOAD_MAX_BYTES` and `UPLOAD_MAX_ROWS` can lower the default ceilings above;
+invalid/nonpositive/above-ceiling settings fail startup. `GET /api/upload-limits`
+returns the configured values for client-side checks/display. Header is excluded
+from row counts. A million rows still must fit the byte limit; nothing is split or
+truncated. Nginx/backend allow 55 MiB envelopes; the parser counts file bytes during
+multipart callbacks, independently of Content-Length. Staging rechecks bounded
+64 KiB reads. Multipart spools, Nginx body buffers and canonical/SQL scratch files
+require additional temporary disk beyond the final Parquet.
+
+Uploads share the original strict row parser and anchored conflict resolver.
+A temporary DuckDB file sorts and exact-deduplicates validated canonical rows;
+Python fetches 1,024 rows at a time and keeps at most 256 distinct candidates per
+conflict interval. Batch boundaries do not break the interval. SQL verifies both
+Parquet multisets including source lines and computes gaps; one timestamp/ID-sorted
+Parquet is published with JSON only after success. Temporary DB/CSV/spill files
+are removed, not retained as a second registry. Builtin still uses its original
+in-memory indexes. DuckDB uses one thread, a 128 MiB engine setting, 4 MiB CSV
+buffers and up to 2 GiB scratch spill; these are not a process-wide RSS cap or disk
+quota. Disk exhaustion returns a safe failure without publishing partial data.
+
+Request cancellation/disconnect signals the worker, which checks between rows,
+batches and SQL stages. The upload lock/spool remain owned until cleanup finishes;
+an in-flight SQL stage can finish before cancellation is observed. Once atomic
+publication has completed, a lost response cannot undo that successful import.
+
+Measured locally in fresh Linux processes, serial runs, one-vessel fixed-value
+synthetic CSVs (not general production throughput):
+
+| Source rows | CSV bytes | Import seconds | Peak VmHWM MiB | Parquet bytes |
+| --- | ---: | ---: | ---: | ---: |
+| 100,000 | 3,200,048 | 2.233 | 174.49 | 414,093 |
+| 500,000 | 16,000,048 | 10.605 | 249.54 | 1,928,633 |
+| 1,000,000 | 32,000,048 | 22.161 | 254.39 | 3,823,262 |
+
+Uncached window calls measured 22.545–28.886 ms; 1M metadata construction took
+0.371 s. Samples miss the application window cache; filesystem caches were not
+cleared. Reproduce each size in a fresh process, using isolated disk scratch:
+```sh
+.venv/bin/python scripts/measure_upload.py --scratch /tmp/isolated-e5a --rows 1000000
+```
+Prefer actual disk rather than tmpfs when comparing memory/disk tradeoffs. Linux
+VmHWM covers the importer process, not Nginx or kernel page cache. These samples do
+not establish constant memory. An isolated Nginx 1M POST took 26.092 s; original
+seek responses during import ranged 2.381–2,699.042 ms under concurrent test load.
+Backend VmHWM across wire checks reached 325.66 MiB. Exact 50 MiB/next-byte and
+1M/next-row boundaries passed; no timeout setting was increased. Many-vessel dense
+windows, metadata aggregates, per-window connections, rendering and total stored
+disk growth remain bottlenecks; large single-vessel success does not benchmark
+those distributions. No partitioning, background queue or month-scale experiment. Frontend restart-on-failure
+recovers a transient Docker DNS miss when services restart in parallel; normal
+Compose startup still waits for backend health.

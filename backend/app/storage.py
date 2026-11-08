@@ -29,12 +29,18 @@ def write_parquet(dataset: Dataset, destination: Path) -> None:
                 writer.writerow((row[0], row[1].isoformat(), *row[2:]))
         with duckdb.connect(config={"threads": 1, "memory_limit": "128MB",
                                     "temp_directory": directory}) as connection:
-            connection.sql("""
-                SELECT * FROM read_csv(?, header=true, auto_detect=false, columns={
-                    'track_id':'VARCHAR', 'timestamp':'TIMESTAMPTZ',
-                    'lat':'DOUBLE', 'lon':'DOUBLE', 'speed_knots':'DOUBLE',
-                    'heading':'DOUBLE', 'source_line':'BIGINT'})
-            """, params=[str(canonical)]).write_parquet(str(destination), compression="zstd")
+            canonical_relation(connection, canonical).write_parquet(str(destination), compression="zstd")
+
+
+def canonical_relation(connection, source: Path):
+    """Only validated canonical rows enter DuckDB; share the exact typed schema."""
+    return connection.sql("""
+        SELECT * FROM read_csv(?, header=true, auto_detect=false, buffer_size=4194304, max_line_size=1048576, columns={
+            'track_id':'VARCHAR', 'timestamp':'TIMESTAMPTZ',
+            'lat':'DOUBLE', 'lon':'DOUBLE', 'speed_knots':'DOUBLE',
+            'heading':'DOUBLE', 'source_line':'BIGINT'})
+    """, params=[str(source)])
+
 
 
 def read_parquet(source: Path) -> list[tuple]:

@@ -205,3 +205,26 @@ this file records contributions and reviewer scope.
   browser/24 deletion backend tests, build, main Docker rebuild and real-browser
   main read-only switch plus isolated two-tab deletion checks; normal library
   metadata remained unchanged. Original WebSocket/source/whitespace checks passed.
+
+## E5a — 8 Nov 2026
+- Codex implemented shared streaming validation/conflict iteration, disk-backed
+  DuckDB upload staging and SQL Parquet verification, limits API/UI/proxy settings,
+  disconnect/cancellation ownership, tests and reproducible measurement script.
+  Applied csv-audit, replay-verification and build-journal skills.
+- Consulted official [DuckDB workload tuning](https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads.html)
+  and [Python API](https://duckdb.org/docs/stable/clients/python/reference/).
+  Cross-checked memory reporting and used Linux VmHWM for the final process peaks;
+  no resource-based preliminary figure is presented as the final peak.
+- Data reviewer independently compared HEAD/current normalization, complete source
+  tuples/provenance and counters, including accepted/rejected randomized fixtures,
+  tiny fetch boundaries, Unicode, doubles and extreme dates; 72 ingestion/upload
+  tests passed. Replay reviewer passed 70 replay/storage tests plus read-only 1M
+  store/ASGI boundary/cache/isolation probes. Release reviewer passed 25 upload and
+  three cancellation/disconnect tests and reviewed multipart/config/source safety.
+  Final release review independently passed four configured/chunked/cancellation
+  cases and main health/limits/Compose checks; its stale E3 performance wording
+  finding was corrected. No unresolved implementation finding remained.
+- Codex executed 211 backend/38 Firefox tests, build, serial 100K/500K/1M measurements,
+  real isolated Nginx byte/row/cancellation/replay/browser/restart checks and main
+  Docker rebuild with existing-recording preservation. UI tiles were mocked;
+  no human verification, final screenshot or month-scale result is claimed.

@@ -102,9 +102,13 @@ def test_storage_failures_never_publish_partial_data(environment, tmp_path, monk
     def fail(*args, **kwargs):
         raise OSError('private/internal/path')
     if failure == 'write':
-        monkeypatch.setattr(uploads, 'write_parquet', fail)
+        monkeypatch.setattr('app.upload_normalization.canonical_relation', fail)
     elif failure == 'verify':
-        monkeypatch.setattr(uploads, 'read_parquet', lambda _: [])
+        from app.upload_normalization import verify_parquet
+        def corrupt_and_verify(connection, path):
+            connection.sql('SELECT * FROM accepted LIMIT 0').write_parquet(str(path))
+            verify_parquet(connection, path)
+        monkeypatch.setattr('app.upload_normalization.verify_parquet', corrupt_and_verify)
     elif failure == 'metadata':
         monkeypatch.setattr(uploads.Path, 'write_text', fail)
     else:

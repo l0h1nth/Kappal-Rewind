@@ -49,10 +49,16 @@ test('upload errors are local and selecting another file clears them', async ({ 
   await input.setInputFiles({ name: 'bad.csv', mimeType: 'text/csv', buffer: Buffer.from('bad') });
   await upload.click();
   await expect(alert).toContainText('CSV line 2: lat');
-  await input.setInputFiles({ name: 'large.csv', mimeType: 'text/csv', buffer: Buffer.alloc(10 * 1024 * 1024 + 1) });
+  await input.evaluate(element => {
+    const file = new File(['large'], 'large.csv', { type: 'text/csv' });
+    Object.defineProperty(file, 'size', { value: 50 * 1024 * 1024 + 1 });
+    const transfer = new DataTransfer(); transfer.items.add(file);
+    (element as HTMLInputElement).files = transfer.files;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await expect(alert).toHaveCount(0);
   await upload.click();
-  await expect(alert).toContainText('10 MiB');
+  await expect(alert).toContainText('50 MiB');
   await input.setInputFiles({ name: 'normal.csv', mimeType: 'text/csv', buffer: Buffer.from('normal') });
   await page.route('**/api/datasets', route => route.fulfill({ status: 413, body: '<html>Too large</html>' }));
   await upload.click();
@@ -64,4 +70,41 @@ test('upload errors are local and selecting another file clears them', async ({ 
   await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   expect(replay.connections()).toBe(1);
   expect(replay.errors).toEqual([]);
+});
+
+test('upload limits come from backend settings and failure has explicit recovery', async ({ page }) => {
+  await setup(page);
+  await page.route('**/api/upload-limits', route => route.fulfill({ status: 503, json: { detail: 'offline' } }));
+  await page.reload();
+  await page.getByText('Upload CSV', { exact: true }).click();
+  await expect(page.locator('.upload-section').getByRole('alert')).toContainText('Upload limits unavailable');
+  await page.getByLabel('CSV file').setInputFiles({ name: 'a.csv', mimeType: 'text/csv', buffer: Buffer.from('12345') });
+  await expect(page.getByRole('button', { name: 'Upload and store' })).toBeDisabled();
+  await page.route('**/api/upload-limits', route => route.fulfill({ json: { max_bytes: 4, max_rows: 2 } }));
+  await page.getByRole('button', { name: 'Retry upload limits' }).click();
+  await expect(page.locator('.upload-help')).toContainText('4 bytes / 2 rows');
+  await page.getByRole('button', { name: 'Upload and store' }).click();
+  await expect(page.locator('.upload-section').getByRole('alert')).toContainText('4 byte');
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
+});
+
+test('default limit display and exact client byte boundary permit submission', async ({ page }) => {
+  await setup(page);
+  await page.getByText('Upload CSV', { exact: true }).click();
+  await expect(page.locator('.upload-help')).toContainText('UTF-8 CSV · Up to 50 MiB / 1,000,000 rows');
+  let posts = 0;
+  await page.route('**/api/datasets', route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: [] });
+    posts++; return route.fulfill({ status: 201, json: result });
+  });
+  await page.getByLabel('CSV file').evaluate(element => {
+    const file = new File(['csv'], 'boundary.csv', { type: 'text/csv' });
+    Object.defineProperty(file, 'size', { value: 52428800 });
+    const transfer = new DataTransfer(); transfer.items.add(file);
+    (element as HTMLInputElement).files = transfer.files;
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.getByRole('button', { name: 'Upload and store' }).click();
+  await expect(page.locator('.upload-result')).toContainText('2 accepted rows / 3 source rows');
+  expect(posts).toBe(1);
 });

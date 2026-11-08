@@ -218,3 +218,31 @@ Interview questions: Why do paused sockets block deletion? What breaks if the
 reference is incremented after opening Parquet? Why must HTTP cancellation not
 release a delete reservation immediately? Why hide a partial deletion rather than
 restore it? Why is a local counter insufficient with two Uvicorn workers?
+
+## E5a — bounded upload processing
+
+- Streaming means consuming bounded chunks/rows, not calling read() once or
+  collecting observations in a list. Multipart first spools a file; its exact
+  byte limit is counted as parts arrive. Row limits count logical CSV records,
+  while csv.reader.line_num preserves physical error lines, including quoted cells.
+- [iter_validated_rows](../backend/app/ingestion.py) is the same validation producer
+  for builtin and uploaded data. [resolve_candidate_groups](../backend/app/ingestion.py)
+  keeps a conflict interval across fetch boundaries and reuses anchored scoring.
+- [normalize_upload](../backend/app/upload_normalization.py) stages typed rows on
+  disk, sorts/deduplicates in DuckDB, fetches small batches, writes one Parquet and
+  verifies both directions with EXCEPT ALL. Temporary files and DB are transport,
+  not another dataset catalog. SQL sort/window operators need buffering or spill;
+  see [DuckDB tuning](https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads.html).
+- [run_import](../backend/app/datasets.py) owns the upload spool and one-import lock
+  while a worker runs. Disconnect/cancellation sets an event; cleanup is awaited
+  before either resource is released. Publication is the directory rename boundary.
+- Byte limits protect transport/disk; row and conflict-work limits protect CPU and
+  indexing work. A short CSV can have many rows, or few huge fields. Bounded Python
+  batches do not make DuckDB/allocator RSS constant. The Linux VmHWM measurements
+  in DATASETS.md include native memory; the engine's 128 MiB setting excludes some
+  overhead. [measure_upload.py](../scripts/measure_upload.py) uses fresh processes.
+
+Interview questions: Why are byte and row limits both necessary? Why does a
+processing batch boundary not end a duplicate interval? Why compare EXCEPT ALL in
+both directions? Why must a cancelled HTTP handler wait before closing its spool?
+What work still scans a whole file despite a small returned replay window?

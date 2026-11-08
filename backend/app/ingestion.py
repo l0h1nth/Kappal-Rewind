@@ -3,6 +3,7 @@
 import csv
 import math
 from collections import defaultdict
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
 from pathlib import Path
@@ -155,65 +156,96 @@ def _resolve_track(groups: dict[datetime, list[Observation]], discarded: list,
             else:
                 candidates[obs] = obs
         unique[timestamp] = sorted(candidates.values(), key=lambda o: (o.lat, o.lon, o.speed_knots, o.heading))
-    selected = {}
-    index = 0
-    while index < len(times):
-        timestamp = times[index]
-        if len(unique[timestamp]) == 1:
-            selected[timestamp] = unique[timestamp][0]
-            index += 1
+    def discarded_conflict(other, chosen):
+        discarded.append(DiscardedObservation(other, chosen.source_line,
+                         "discarded by anchored whole-interval geographic continuity"))
+    return {obs.timestamp: obs for obs in resolve_candidate_groups(
+        (unique[t] for t in times), discarded_conflict, max_conflict_candidates)}
+
+
+def resolve_candidate_groups(groups: Iterable[list[Observation]], on_discard: Callable,
+                             max_conflict_candidates: int | None = None) -> Iterator[Observation]:
+    """Shared anchored policy over sorted, exact-deduplicated groups of ONE vessel.
+
+    Only the current contiguous conflict block and its two anchors are retained.
+    Callers bound group creation too, before accumulating an oversized group.
+    """
+    iterator = iter(groups)
+    current = next(iterator, None)
+    before = None
+    while current is not None:
+        if len(current) == 1:
+            before = current[0]
+            yield before
+            current = next(iterator, None)
             continue
-        stop = index + 1
-        while (stop < len(times) and times[stop] - times[stop - 1] == SECOND
-               and len(unique[times[stop]]) > 1):
-            stop += 1
-        before = selected.get(times[index - 1]) if index and timestamp - times[index - 1] == SECOND else None
-        after_group = unique[times[stop]] if stop < len(times) and times[stop] - times[stop - 1] == SECOND else []
-        after = after_group[0] if len(after_group) == 1 else None
-        if (max_conflict_candidates is not None and
-                sum(len(unique[t]) for t in times[index:stop]) > max_conflict_candidates):
-            raise DatasetLimitError(f"conflicting interval exceeds {max_conflict_candidates} candidates; split the recording")
-        chosen = _resolve_block([unique[t] for t in times[index:stop]], before, after)
-        for obs in chosen:
-            selected[obs.timestamp] = obs
-            for other in unique[obs.timestamp]:
+        block, candidates = [], 0
+        first = current[0].timestamp
+        left = before if before is not None and first - before.timestamp == SECOND else None
+        while current is not None:
+            block.append(current)
+            candidates += len(current)
+            if max_conflict_candidates is not None and candidates > max_conflict_candidates:
+                raise DatasetLimitError(f"conflicting interval exceeds {max_conflict_candidates} candidates; split the recording")
+            following = next(iterator, None)
+            if following is None or len(following) == 1 or following[0].timestamp - current[0].timestamp != SECOND:
+                break
+            current = following
+        right = (following[0] if following and len(following) == 1 and
+                 following[0].timestamp - block[-1][0].timestamp == SECOND else None)
+        chosen = _resolve_block(block, left, right)
+        for group, obs in zip(block, chosen):
+            yield obs
+            for other in group:
                 if other != obs:
-                    discarded.append(DiscardedObservation(
-                        other, obs.source_line, "discarded by anchored whole-interval geographic continuity",
-                    ))
-        index = stop
-    return selected
+                    on_discard(other, obs)
+        before = chosen[-1]
+        current = following
 
 
-def load_dataset(path: Path, *, naive_timezone: tzinfo = IST, max_rows: int | None = None,
-                 max_conflict_candidates: int | None = None) -> Dataset:
-    """Fail on the first invalid row or unresolved conflict; return no partial dataset."""
-    grouped = defaultdict(lambda: defaultdict(list))
-    source_rows = heading_360_rows = naive_timestamp_rows = 0
+@dataclass
+class ValidationCounts:
+    source_rows: int = 0
+    heading_360_rows: int = 0
+    naive_timestamp_rows: int = 0
+
+
+def iter_validated_rows(path: Path, counts: ValidationCounts, *, naive_timezone: tzinfo = IST,
+                        max_rows: int | None = None, check_cancel: Callable = lambda: None) -> Iterator[Observation]:
+    """The same strict CSV/row/time/heading validation for both storage paths."""
     with path.open(newline="", encoding="utf-8") as source:
         reader = csv.reader(source, strict=True)
         try:
             if next(reader, None) != COLUMNS:
                 raise ValueError(f"CSV line 1: expected columns {COLUMNS}")
             while True:
+                check_cancel()
                 line = reader.line_num + 1
                 row = next(reader, None)
                 if row is None:
                     break
-                if max_rows is not None and source_rows >= max_rows:
+                if max_rows is not None and counts.source_rows >= max_rows:
                     raise DatasetLimitError(f"CSV exceeds {max_rows} source rows; split the recording")
                 obs = _parse_row(row, line, naive_timezone)
-                source_rows += 1
-                naive_timestamp_rows += not (row[1].endswith("Z") or row[1][-6:-5] in ("+", "-"))
-                heading_360_rows += obs.heading == 360
+                counts.source_rows += 1
+                counts.naive_timestamp_rows += not (row[1].endswith("Z") or row[1][-6:-5] in ("+", "-"))
+                counts.heading_360_rows += obs.heading == 360
                 if obs.heading == 360:
-                    obs = Observation(obs.track_id, obs.timestamp, obs.lat, obs.lon,
-                                      obs.speed_knots, 0.0, obs.source_line)
-                grouped[obs.track_id][obs.timestamp].append(obs)
+                    obs = Observation(obs.track_id, obs.timestamp, obs.lat, obs.lon, obs.speed_knots, 0.0, obs.source_line)
+                yield obs
         except csv.Error as error:
             raise ValueError(f"CSV line {reader.line_num}: malformed CSV: {error}") from error
-    if not grouped:
+    if not counts.source_rows:
         raise ValueError("CSV line 1: no observations")
+
+
+def load_dataset(path: Path, *, naive_timezone: tzinfo = IST, max_rows: int | None = None,
+                 max_conflict_candidates: int | None = None) -> Dataset:
+    """Fail on the first invalid row or unresolved conflict; return no partial dataset."""
+    grouped = defaultdict(lambda: defaultdict(list))
+    counts = ValidationCounts()
+    for obs in iter_validated_rows(path, counts, naive_timezone=naive_timezone, max_rows=max_rows):
+        grouped[obs.track_id][obs.timestamp].append(obs)
     discarded = []
     tracks = {vessel: _resolve_track(grouped[vessel], discarded, max_conflict_candidates) for vessel in sorted(grouped)}
     start = min(next(iter(track)) for track in tracks.values())
@@ -231,5 +263,5 @@ def load_dataset(path: Path, *, naive_timezone: tzinfo = IST, max_rows: int | No
     accepted = [obs for track in tracks.values() for obs in track.values()]
     bounds = {"south": min(o.lat for o in accepted), "north": max(o.lat for o in accepted),
               "west": min(o.lon for o in accepted), "east": max(o.lon for o in accepted)}
-    return Dataset(tracks, gaps, start, end, bounds, source_rows, heading_360_rows,
-                   sorted(discarded, key=lambda entry: entry.observation.source_line), naive_timestamp_rows)
+    return Dataset(tracks, gaps, start, end, bounds, counts.source_rows, counts.heading_360_rows,
+                   sorted(discarded, key=lambda entry: entry.observation.source_line), counts.naive_timestamp_rows)
