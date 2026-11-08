@@ -2,7 +2,7 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: I3 reviewed** — interactive Leaflet map, directional markers, gap-split trails,
+**Status: frontend redesign reviewed** — interactive Leaflet map, directional markers, gap-split trails,
 server-controlled timeline, Play/Pause/Reset, 1×/2×/5×/10× speeds and current vessel
 details. Final verification/submission preparation remain for Phase 7. See the [plan](PLAN.md).
 
@@ -39,11 +39,11 @@ checks are recorded separately. OSM tiles require internet; zoom to separate nea
 
 Optional **E1–E5a** add CSV upload, a persistent My Recordings library, read-only
 previews and Replay for stored recordings. Switches start paused with dynamic
-time/bounds; return to the built-in assignment above the map. Uploading alone
+time/bounds; return to the built-in assignment through the Recordings tab. Uploading alone
 keeps the current replay. Uploads support up to **50 MiB / 1,000,000 source rows**
-with disk-backed normalization. Confirmed permanent deletion blocks active recordings
-(including paused sessions); run one backend worker. Upload feedback distinguishes transfer
-from processing; expand recording information above the map for counts and times.
+with disk-backed normalization. Deleting a loaded upload closes this tab’s replay and leaves an empty workspace;
+other active clients block deletion. Run one backend worker. Upload feedback distinguishes transfer
+from processing; expand recording information in the Vessels tab for counts and times.
 Limits, recovery and APIs: [recordings](docs/DATASETS.md).
 
 ## Data problems found

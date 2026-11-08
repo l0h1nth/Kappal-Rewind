@@ -20,6 +20,7 @@ test('upload progress and validation leave the replay session unchanged', async 
     await wait;
     await route.fulfill({ status: 201, json: result });
   });
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Upload and store' })).toBeDisabled();
   await page.getByLabel('CSV file').setInputFiles({ name: 'other.csv', mimeType: 'text/csv', buffer: Buffer.from('csv-content') });
@@ -41,6 +42,7 @@ test('upload progress and validation leave the replay session unchanged', async 
 
 test('upload errors are local and selecting another file clears them', async ({ page }) => {
   const replay = await setup(page);
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   const input = page.getByLabel('CSV file');
   const upload = page.getByRole('button', { name: 'Upload and store' });
@@ -76,6 +78,7 @@ test('upload limits come from backend settings and failure has explicit recovery
   await setup(page);
   await page.route('**/api/upload-limits', route => route.fulfill({ status: 503, json: { detail: 'offline' } }));
   await page.reload();
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   await expect(page.locator('.upload-section').getByRole('alert')).toContainText('Upload limits unavailable');
   await page.getByLabel('CSV file').setInputFiles({ name: 'a.csv', mimeType: 'text/csv', buffer: Buffer.from('12345') });
@@ -90,6 +93,7 @@ test('upload limits come from backend settings and failure has explicit recovery
 
 test('default limit display and exact client byte boundary permit submission', async ({ page }) => {
   await setup(page);
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   await expect(page.locator('.upload-help')).toContainText('UTF-8 CSV · Up to 50 MiB / 1,000,000 rows');
   let posts = 0;
@@ -119,6 +123,7 @@ async function controlledUploads(page: import('@playwright/test').Page) {
     XMLHttpRequest.prototype.abort = function () { this.dispatchEvent(new Event('abort')); };
   });
   await setup(page);
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByText('Upload CSV', { exact: true }).click();
   await page.getByLabel('CSV file').setInputFiles({ name: 'stages.csv', mimeType: 'text/csv', buffer: Buffer.from('csv') });
 }

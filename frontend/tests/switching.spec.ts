@@ -43,9 +43,19 @@ async function prepare(page: Page) {
     });
     route.send(JSON.stringify(state));
   });
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByRole('button', { name: 'Refresh recordings' }).click();
   await expect(replay(page, A)).toBeVisible();
+  await page.getByRole('tab', { name: 'Vessels', exact: true }).click();
   return { builtin, opened, sockets };
+}
+async function choose(page: Page, id: string) {
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
+  await replay(page, id).click();
+}
+async function builtin(page: Page) {
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
+  await page.getByRole('button', { name: 'Replay built-in assignment' }).click();
 }
 async function loaded(page: Page, id: string) {
   await expect(page.getByLabel('Current recording')).toContainText(id);
@@ -58,14 +68,14 @@ test('playing builtin → London → Tokyo → builtin resets state and refits t
   const map = await page.locator('.leaflet-container').elementHandle();
   await page.getByTitle('Vessel T012').click(); await play(page).click();
   await page.getByLabel('Playback speed').selectOption('10');
-  await replay(page, A).click(); await loaded(page, A);
+  await choose(page, A); await loaded(page, A);
   await expect(page.getByLabel('Playback speed')).toHaveValue('1');
   await expect(position(page)).toHaveValue('0');
   await expect(page.locator('footer')).toContainText('Select a vessel');
   await expect(page.getByTitle('Vessel T012')).toHaveCount(0);
   const box = (await page.locator('.leaflet-container').boundingBox())!;
   for (const id of [A, B]) {
-    if (id === B) { await replay(page, id).click(); await loaded(page, id); }
+    if (id === B) { await choose(page, id); await loaded(page, id); }
     const marker = (await page.getByTitle(id === A ? 'Vessel LONDON' : 'Vessel TOKYO', { exact: true }).boundingBox())!;
     expect(marker.x).toBeGreaterThan(box.x); expect(marker.x + marker.width).toBeLessThan(box.x + box.width);
     expect(marker.y).toBeGreaterThan(box.y); expect(marker.y + marker.height).toBeLessThan(box.y + box.height);
@@ -84,7 +94,7 @@ test('playing builtin → London → Tokyo → builtin resets state and refits t
   server.sockets.get(B)!.send(JSON.stringify({ ...frame(B), second: 1, timestamp: '2024-01-01T00:00:01Z' }));
   await expect(position(page)).toHaveValue('1');
   await expect(page.locator('.leaflet-map-pane')).toHaveAttribute('style', view!);
-  await page.getByRole('button', { name: 'Replay built-in assignment' }).click();
+  await builtin(page);
   await expect(page.getByLabel('Current recording')).toContainText('Built-in assignment');
   await expect(position(page)).toHaveAttribute('max', '1799');
   await expect(page.getByTitle('Vessel T012')).toBeVisible();
@@ -96,7 +106,7 @@ test('metadata failure preserves a playing session and vessel selection; retry s
   const server = await prepare(page);
   await page.getByTitle('Vessel T012').click(); await play(page).click();
   await page.route(`**/api/replay/${A}/meta`, route => route.fulfill({ status: 404, json: { detail: 'Dataset not found' } }));
-  await replay(page, A).click();
+  await choose(page, A);
   await expect(page.getByRole('alert')).toContainText('Dataset not found');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   await expect(page.locator('footer')).toContainText('T012 selected'); expect(server.opened).toEqual([]);
@@ -108,14 +118,14 @@ test('rapid selections ignore late metadata; choosing current recording cancels 
   const server = await prepare(page);
   let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
   await page.route(`**/api/replay/${A}/meta`, async route => { await held; await route.fulfill({ json: meta(A) }); });
-  await replay(page, A).click();
+  await choose(page, A);
   await expect(page.getByText('Loading recording… Current replay continues until metadata is ready.')).toBeVisible();
-  await replay(page, B).click(); await loaded(page, B); release();
+  await choose(page, B); await loaded(page, B); release();
   await expect(page.getByLabel('Current recording')).toContainText(B); expect(server.opened).toEqual([B]);
   let releaseAgain = () => {}; const heldAgain = new Promise<void>(resolve => { releaseAgain = resolve; });
   await page.route(`**/api/replay/${A}/meta`, async route => { await heldAgain; await route.fulfill({ json: meta(A) }); });
   await page.getByTitle('Vessel TOKYO', { exact: true }).click(); await play(page).click();
-  await replay(page, A).click(); await expect(replay(page, B)).toBeEnabled(); await replay(page, B).click();
+  await choose(page, A); await page.getByRole('tab', { name: 'Recordings', exact: true }).click(); await expect(replay(page, B)).toBeEnabled(); await choose(page, B);
   await expect(page.getByText('Loading recording… Current replay continues until metadata is ready.')).toHaveCount(0);
   releaseAgain(); await expect(page.locator('footer')).toContainText('TOKYO selected');
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled(); expect(server.opened).toEqual([B]);
@@ -142,6 +152,7 @@ test('timeline drafts and queued old socket callbacks cannot leak into another r
   const box = (await position(page).boundingBox())!;
   await page.mouse.move(box.x + 8, box.y + box.height / 2); await page.mouse.down();
   await expect(page.getByText('Seek preview', { exact: false })).toBeVisible();
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).evaluate(button => (button as HTMLButtonElement).click());
   await replay(page, A).evaluate(button => (button as HTMLButtonElement).click());
   await page.mouse.up(); await loaded(page, A);
   await expect(page.getByText('Seek preview', { exact: false })).toHaveCount(0);
@@ -154,7 +165,7 @@ test('timeline drafts and queued old socket callbacks cannot leak into another r
 });
 
 test('uploaded controls use dynamic endpoints and reject frames for a different dataset', async ({ page }) => {
-  const server = await prepare(page); await replay(page, A).click(); await loaded(page, A);
+  const server = await prepare(page); await choose(page, A); await loaded(page, A);
   for (const speed of ['2', '5', '10', '1']) {
     await page.getByLabel('Playback speed').selectOption(speed); await expect(page.getByLabel('Playback speed')).toHaveValue(speed);
   }
@@ -172,18 +183,20 @@ test('vessel search replaces metadata IDs and clears the filter after switching'
   await prepare(page);
   await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await page.getByLabel('Search vessel ID').fill('t012');
-  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
+  await page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option').click();
   await expect(page.locator('.vessel-panel h2')).toHaveText('T012');
-  await replay(page, A).click(); await loaded(page, A);
+  await choose(page, A); await loaded(page, A);
   await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await expect(page.getByLabel('Search vessel ID')).toHaveValue('');
-  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button', { name: /LONDON/ }).click();
+  await page.getByLabel('Search vessel ID').click();
+  await page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option', { name: /LONDON/ }).click();
   await expect(page.getByTitle('Vessel LONDON')).toHaveClass(/is-selected/);
-  await replay(page, B).click(); await loaded(page, B);
+  await choose(page, B); await loaded(page, B);
   await expect(page.getByLabel('Search vessel ID')).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Matching vessels' })).not.toContainText('LONDON');
+  await page.getByLabel('Search vessel ID').click();
+  await expect(page.getByRole('listbox', { name: 'Matching vessels' })).not.toContainText('LONDON');
   await page.getByLabel('Search vessel ID').fill('tokyo2');
-  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
+  await page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option').click();
   await expect(page.locator('.vessel-panel h2')).toHaveText('TOKYO2');
 });
 
@@ -199,7 +212,7 @@ test('current recording information shows exact metadata, timezone and optional 
   await page.route(`**/api/datasets/${A}`, route => route.fulfill({ json: { ...record(A),
     validation: { ...record(A).validation, source_row_count: 7, naive_timestamp_rows: 7,
       discarded_row_count: 2, exact_duplicate_rows: 2, missing_observation_seconds: 0 } } }));
-  await replay(page, A).click(); await loaded(page, A);
+  await choose(page, A); await loaded(page, A);
   await expect(info.locator('summary')).toHaveText('Uploaded recording · 1 vessels · 5s · 5 observations');
   await info.locator('summary').click();
   await expect(info).toContainText('a.csv');
@@ -212,9 +225,9 @@ test('late recording information cannot replace another recording and metadata f
   await prepare(page);
   let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
   await page.route(`**/api/datasets/${A}`, async route => { await held; await route.fulfill({ json: record(A) }); });
-  await replay(page, A).click(); await loaded(page, A);
+  await choose(page, A); await loaded(page, A);
   await page.route(`**/api/datasets/${B}`, route => route.fulfill({ status: 503, json: { detail: 'unavailable' } }));
-  await replay(page, B).click(); await loaded(page, B);
+  await choose(page, B); await loaded(page, B);
   const info = page.getByLabel('Recording information', { exact: true });
   await info.locator('summary').click();
   await expect(info).toContainText('Validation counts unavailable'); release();

@@ -295,3 +295,22 @@ this file records contributions and reviewer scope.
   recording preservation/integration checks. Browser tiles were mocked; timing uses
   next-rAF feedback proxies. No human verification, generic capacity guarantee,
   final submission verification, commit or push is claimed.
+
+## Frontend UX/layout redesign — 8 Nov 2026
+
+- Codex authored the workspace/tabs, bounded autocomplete and sidebar detail view,
+  nullable replay lifecycle and one-confirmation deletion UI, plus browser regressions.
+  Used build-journal/replay-verification skills. The user-supplied
+  [AIS demo](https://github.com/HoangSonDeveloper/ais-demo) and overview screenshot
+  informed visual hierarchy only; no source/assets copied. Consulted WAI combobox
+  and MDN WebSocket-close documentation for accessibility/lifecycle behavior.
+- Independent replay review inspected shutdown/preflight/empty-state races; release
+  review found off-screen keyboard highlights. Codex corrected scrolling and added
+  a bounding-box regression, and visual QA corrected upload/details crowding.
+  Reviewers did not edit implementation or claim the parent's browser runs.
+- Browser checks use controlled API/socket fixtures and mocked tiles; separate real
+  Docker checks use disposable isolated uploads, including another live client.
+  Codex executed 216 backend/69 Firefox tests, build, main preservation/WebSocket
+  checks and actual main desktop/mobile QA with real OSM tiles.
+  No real user recording was deleted, no human verification is claimed, and final
+  assignment screenshot/submission work remains deferred.

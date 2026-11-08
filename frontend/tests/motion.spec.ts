@@ -103,7 +103,7 @@ test('search selects absent metadata vessels locally and persists selection thro
   const server = await setup(page);
   await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await page.getByLabel('Search vessel ID').fill('t015');
-  const button = page.getByRole('list', { name: 'Matching vessels' }).getByRole('button');
+  const button = page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option');
   await expect(button).toHaveCount(1); await expect(button).toContainText('No current observation');
   const originalMarker = page.getByTitle('Vessel T007');
   const position = await originalMarker.getAttribute('style');

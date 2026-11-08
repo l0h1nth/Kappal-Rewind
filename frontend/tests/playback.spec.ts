@@ -23,8 +23,8 @@ test('play/pause, all supported speeds and reset use confirmed state without res
   await expect(clock(page)).toHaveText('09:01:40');
   for (const speed of ['2', '5', '10', '1']) {
     await page.getByRole('combobox', { name: 'Playback speed' }).selectOption(speed);
-    await expect(page.getByRole('combobox')).toBeEnabled();
-    await expect(page.getByRole('combobox')).toHaveValue(speed);
+    await expect(page.getByRole('combobox', { name: 'Playback speed' })).toBeEnabled();
+    await expect(page.getByRole('combobox', { name: 'Playback speed' })).toHaveValue(speed);
     await expect(clock(page)).toHaveText('09:01:40');
   }
   await page.getByRole('button', { name: 'Pause' }).click();
@@ -94,14 +94,14 @@ test('speed selector waits for confirmation rather than displaying optimistic sp
   const server = await setup(page, { autoRespond: false });
   server.send(stateAt(10, true));
   await expect(clock(page)).toHaveText('09:00:10');
-  await page.getByRole('combobox').selectOption('5');
-  await expect(page.getByRole('combobox')).toHaveValue('1');
-  await expect(page.getByRole('combobox')).toBeDisabled();
+  await page.getByRole('combobox', { name: 'Playback speed' }).selectOption('5');
+  await expect(page.getByRole('combobox', { name: 'Playback speed' })).toHaveValue('1');
+  await expect(page.getByRole('combobox', { name: 'Playback speed' })).toBeDisabled();
   server.send(stateAt(11, true));
-  await expect(page.getByRole('combobox')).toHaveValue('1');
+  await expect(page.getByRole('combobox', { name: 'Playback speed' })).toHaveValue('1');
   server.send(stateAt(11, true, 5));
-  await expect(page.getByRole('combobox')).toHaveValue('5');
-  await expect(page.getByRole('combobox')).toBeEnabled();
+  await expect(page.getByRole('combobox', { name: 'Playback speed' })).toHaveValue('5');
+  await expect(page.getByRole('combobox', { name: 'Playback speed' })).toBeEnabled();
   await expect(clock(page)).toHaveText('09:00:11');
 });
 
@@ -123,7 +123,7 @@ test('delayed acknowledgements preserve range and speed keyboard focus without a
   server.send(stateAt(2));
   await expect(slider).toBeEnabled();
 
-  const speed = page.getByRole('combobox');
+  const speed = page.getByRole('combobox', { name: 'Playback speed' });
   await speed.focus();
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => server.commands).toHaveLength(3);

@@ -8,11 +8,21 @@ export interface SearchFocus { datasetId: string; lat: number; lon: number }
 
 interface Props { searchFocus?: SearchFocus | null; metadata: Metadata; frame: ReplayFrame | null; selected: string | null; onSelect: (id: string) => void; datasetId?: string; motionEnabled?: boolean; motionEpoch?: number }
 
+function MapSize() {
+  const map = useMap();
+  useEffect(() => {
+    const observer = new ResizeObserver(() => map.invalidateSize({ pan: false }));
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 function RecordingBounds({ metadata, datasetId }: { metadata: Metadata; datasetId: string }) {
   const map = useMap();
   const previous = useRef(datasetId);
   useEffect(() => {
-    if (previous.current !== datasetId) {
+    if (previous.current !== datasetId && datasetId !== 'empty') {
       const { south, north, west, east } = metadata.bounds;
       map.fitBounds([[south, west], [north, east]], { padding: [32, 32], maxZoom: 14, animate: false });
       previous.current = datasetId;
@@ -39,6 +49,7 @@ export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'bu
   return <section className="map-region" aria-label="Vessel map">
     <MapContainer className="vessel-map" bounds={[[south, west], [north, east]]}
       boundsOptions={{ padding: [32, 32], maxZoom: 14 }}>
+      <MapSize />
       <RecordingBounds metadata={metadata} datasetId={datasetId} />
       <SearchMapFocus request={searchFocus} datasetId={datasetId} />
       <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19}

@@ -31,6 +31,7 @@ try{
     new MutationObserver(()=>{const p=window.probe;const click=p.click;if(click&&document.querySelector('.vessel-panel h2')?.textContent===click.id){p.click=null;requestAnimationFrame(()=>{if(p.active)p.clickMs.push(performance.now()-click.time);});}}).observe(document.querySelector('.vessel-panel'),{childList:true,subtree:true,characterData:true});
   });
   for(const item of cases){
+    await page.getByRole('tab',{name:'Recordings',exact:true}).click();
     await page.getByRole('button',{name:`Replay ${item.original_filename ?? (item.case==='original'?'tracks.csv':'source.csv')} (${item.dataset_id.slice(0,8)})`,exact:true}).click();
     await expect(page.getByLabel('Current recording')).toContainText(item.dataset_id);
     await expect(page.locator('.vessel-marker')).toHaveCount(item.vessels);
@@ -64,6 +65,7 @@ try{
       console.log(JSON.stringify({case:item.case,speed,frames:result.seconds.length,commits:result.react_commits,max_frame_gap_ms:Math.max(...result.animation_frame_gaps_ms),click_ms:result.click_to_next_frame_ms}));
     }
   }
+  await page.getByRole('tab',{name:'Recordings',exact:true}).click();
   await page.getByRole('button',{name:'Replay built-in assignment',exact:true}).click();await expect(page.locator('.vessel-marker')).toHaveCount(20);
   if(!await map.evaluate(e=>e===document.querySelector('.leaflet-container')))throw Error('Map remounted');
   fs.writeFileSync(output,JSON.stringify({measurements,errors,conditions:'Headless Firefox1600x1000; production bundle; mocked tiles; websocket JSON observation and React commit hook; one sampled2.5s interval per speed/dataset; same frontend for both backends'},null,2));

@@ -15,7 +15,8 @@ function confirms(frame: ReplayFrame, command: ReplayCommand) {
   }
 }
 
-export function useReplaySocket(datasetId = 'builtin') {
+export function useReplaySocket(datasetId: string | null = 'builtin') {
+  const closeSessionRef = useRef<(() => Promise<void>) | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const frameRef = useRef<ReplayFrame | null>(null);
   const pendingRef = useRef<Pending | null>(null);
@@ -72,9 +73,10 @@ export function useReplaySocket(datasetId = 'builtin') {
     clearPending();
     setConnectionDataset(datasetId);
     frameRef.current = null;
-    setStatus('connecting');
+    setStatus(datasetId === null ? 'disconnected' : 'connecting');
     setFrame(null);
     setError(null);
+    if (datasetId === null) return; // Explicit empty workspace: never reconnect implicitly.
     // StrictMode's setup/cleanup probe cancels this before opening a duplicate connection.
     const timer = window.setTimeout(() => {
       // Bound both the handshake and the wait for the first usable server state.
@@ -133,7 +135,7 @@ export function useReplaySocket(datasetId = 'builtin') {
         }
       };
     }, 0);
-    return () => {
+    const stop = () => {
       active = false;
       window.clearTimeout(timer);
       window.clearTimeout(initialDeadline);
@@ -144,6 +146,24 @@ export function useReplaySocket(datasetId = 'builtin') {
         socket.close();
         if (socketRef.current === socket) socketRef.current = null;
       }
+    };
+    const closeSession = () => {
+      const target = socket;
+      if (!target || target.readyState === WebSocket.CLOSED) { stop(); return Promise.resolve(); }
+      return new Promise<void>((resolve, reject) => {
+        const closed = () => { window.clearTimeout(timeout); resolve(); };
+        const timeout = window.setTimeout(() => {
+          target.removeEventListener('close', closed);
+          reject(new Error('Replay connection has not closed. Retry deletion after it closes.'));
+        }, 4000);
+        target.addEventListener('close', closed, { once: true });
+        stop(); // Invalidate callbacks synchronously before React's effect cleanup.
+      });
+    };
+    closeSessionRef.current = closeSession;
+    return () => {
+      stop();
+      if (closeSessionRef.current === closeSession) closeSessionRef.current = null;
     };
   }, [attempt, clearPending, write, datasetId]);
 
@@ -162,7 +182,16 @@ export function useReplaySocket(datasetId = 'builtin') {
     return write(command);
   }, [write, datasetId]);
 
-  const current = connectionDataset === datasetId;
-  return { frame: current ? frame : null, status: current ? status : 'connecting',
-    error: current ? error : null, motionEpoch, busy: current && busy, send, reconnect: () => setAttempt(value => value + 1) };
+  const disconnect = useCallback(() => {
+    const closing = closeSessionRef.current?.() ?? Promise.resolve();
+    frameRef.current = null;
+    clearPending();
+    setFrame(null); setError(null); setStatus('disconnected');
+    setMotionEpoch(value => value + 1);
+    return closing;
+  }, [clearPending]);
+
+  const current = datasetId !== null && connectionDataset === datasetId;
+  return { frame: current ? frame : null, status: current ? status : datasetId === null ? 'disconnected' : 'connecting',
+    error: current ? error : null, motionEpoch, busy: current && busy, send, disconnect, reconnect: () => { if (datasetId !== null) setAttempt(value => value + 1); } };
 }

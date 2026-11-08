@@ -328,3 +328,27 @@ Sources: [DuckDB tuning](https://duckdb.org/docs/2.0/guides/performance/how_to_t
 [Parquet filtering](https://duckdb.org/docs/2.0/data/parquet/overview),
 [indexing](https://duckdb.org/docs/2.0/guides/performance/indexing),
 [PostgreSQL concurrency](https://www.postgresql.org/docs/current/mvcc-intro.html).
+
+## Frontend workspace redesign
+
+- **Tabs and navigation:** App owns the active sidebar tab; the library owns its
+  details view. Hidden mounted panels preserve uploads and read-only request state.
+  A bounded preview replaces the wide table; Back restores the list.
+- **Accessible autocomplete:** a controlled input filters metadata IDs locally,
+  renders eight listbox options, and keeps DOM focus on the input while
+  aria-activedescendant names the keyboard highlight. Arrow keys scroll that option
+  into view; Enter/click selects, Escape/outside click closes without losing selection.
+- **Empty recording state:** a nullable recording ID differs from initial built-in
+  playback. Empty means no socket, frames, trails or enabled timeline; choosing a
+  recording explicitly starts a session. Metadata epochs reject late switch results.
+- **Close before delete:** synchronously invalidate callbacks/timers, clear frames,
+  then await a separately registered close listener before DELETE. Browser closure
+  is not a backend release acknowledgement; the existing 409 guard remains final.
+- **Responsive layout:** Grid gives the map remaining width and the sidebar 300–328px;
+  min-height:0 enables independent panel scrolling. Narrow screens stack the panels;
+  ResizeObserver invalidates Leaflet dimensions without remounting its map.
+
+Study [combobox keyboard semantics](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/)
+and [WebSocket closing](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close).
+Interview prompt: why must closing a recording and returning to the initial dataset
+be different state transitions?

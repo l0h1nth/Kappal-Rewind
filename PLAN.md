@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is I2: upload feedback and dataset information.
+Python/FastAPI and WebSockets. Current authorized scope is the frontend UX/layout redesign; final submission remains deferred.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -104,12 +104,18 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [x] Verify 216 backend/60 Firefox tests, build, real Docker/WebSocket integration, complete row parity and independent reviews.
 - [x] Record before/after measurements, limits and scaling/learning guidance in docs/BENCHMARKS.md.
 
+## Frontend UX/layout redesign
+- [x] Deliver a compact map/timeline workspace with responsive Vessels/Recordings tabs.
+- [x] Bound accessible autocomplete/library rendering and contain recording details/previews in the sidebar.
+- [x] Close this tab's replay before active deletion, retain an explicit empty state and preserve other-client protection.
+- [x] Verify backend/browser/build, isolated real deletion, main data preservation and independent reviews.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2 and I3 are complete with independent reviews appropriate to each scope.
-Stop after I3, before further E5 work or Phase 7 final verification,
+**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2, I3 and the frontend redesign are complete with independent reviews appropriate to each scope.
+Stop after the frontend redesign, before further E5 work or Phase 7 final verification,
 screenshot, repository cleanup and submission preparation.

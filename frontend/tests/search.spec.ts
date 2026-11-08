@@ -7,18 +7,20 @@ test('search is visible by default, filters case-insensitively and supports keyb
   const server = await setup(page);
   const search = page.getByLabel('Search vessel ID');
   await expect(search).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Matching vessels' }).getByRole('button')).toHaveCount(20);
+  await expect(search).toHaveAttribute('role', 'combobox');
+  await search.click();
+  await expect(page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option')).toHaveCount(8);
   const before = requests.length;
   await search.fill(' t007 ');
-  const result = page.getByRole('list', { name: 'Matching vessels' }).getByRole('button');
+  const result = page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option');
   await expect(result).toHaveCount(1);
   await expect(result).toContainText('T007');
   await expect(result).toContainText('Current observation');
-  await search.press('Tab');
-  await expect(result).toBeFocused();
-  await result.press('Enter');
+  await search.press('ArrowDown');
+  await expect(search).toHaveAttribute('aria-activedescendant', 'vessel-option-0');
+  await search.press('Enter');
   await expect(page.locator('.vessel-panel h2')).toHaveText('T007');
-  await expect(result).toHaveAttribute('aria-pressed', 'true');
+  await expect(search).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByTitle('Vessel T007')).toHaveClass(/is-selected/);
   expect(requests.length).toBe(before);
   expect(server.commands).toEqual([]);
@@ -29,7 +31,7 @@ test('one search click focuses a current fix once; subsequent playback preserves
   const map = page.locator('.leaflet-container');
   const mapElement = await map.elementHandle();
   await page.getByLabel('Search vessel ID').fill('t007');
-  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
+  await page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option').click();
   const marker = page.getByTitle('Vessel T007');
   await expect(marker).toHaveClass(/is-selected/);
   await expect(page.locator('.vessel-panel h2')).toHaveText('T007');
@@ -54,20 +56,20 @@ test('one search click focuses a current fix once; subsequent playback preserves
   expect(server.errors).toEqual([]);
 });
 
-test('500-vessel search stays bounded and keyboard-accessible on a small screen', async ({ page }) => {
+test('1000-vessel autocomplete stays bounded and keyboard-accessible on a small screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const ids = Array.from({ length: 500 }, (_, index) => `SHIP${String(index).padStart(3, '0')}`);
+  const ids = Array.from({ length: 1000 }, (_, index) => `SHIP${String(index).padStart(3, '0')}`);
   await setup(page, { metadata: { ...metadata, vessel_count: ids.length, vessel_ids: ids },
-    frame: { ...initial, vessels: [vessel(ids[499], 13.08, 80.35)] } });
+    frame: { ...initial, vessels: [vessel(ids[999], 13.08, 80.35)] } });
   const search = page.getByLabel('Search vessel ID');
   await search.scrollIntoViewIfNeeded();
   await expect(search).toBeVisible();
-  const results = page.getByRole('list', { name: 'Matching vessels' });
-  await expect(results.getByRole('button')).toHaveCount(500);
-  expect(await results.evaluate(e => e.clientHeight <= 180 && e.scrollHeight > e.clientHeight)).toBe(true);
-  await search.fill('ship499');
-  await search.press('Tab'); await page.keyboard.press('Space');
-  await expect(page.locator('.vessel-panel h2')).toHaveText('SHIP499');
-  await expect(page.getByTitle('Vessel SHIP499')).toHaveClass(/is-selected/);
+  const results = page.getByRole('listbox', { name: 'Matching vessels' });
+  await search.click();
+  await expect(page.getByRole('listbox', { name: 'Matching vessels' }).getByRole('option')).toHaveCount(8);
+  await search.fill('ship999');
+  await search.press('ArrowDown'); await search.press('Enter');
+  await expect(page.locator('.vessel-panel h2')).toHaveText('SHIP999');
+  await expect(page.getByTitle('Vessel SHIP999')).toHaveClass(/is-selected/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
