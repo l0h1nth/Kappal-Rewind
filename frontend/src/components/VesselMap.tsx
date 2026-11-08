@@ -4,7 +4,7 @@ import type { Metadata, ReplayFrame } from '../types';
 import { VesselMarker } from './VesselMarker';
 import { VesselTrails } from './VesselTrails';
 
-interface Props { metadata: Metadata; frame: ReplayFrame | null; selected: string | null; onSelect: (id: string) => void; datasetId?: string }
+interface Props { metadata: Metadata; frame: ReplayFrame | null; selected: string | null; onSelect: (id: string) => void; datasetId?: string; motionEnabled?: boolean; motionEpoch?: number }
 
 function RecordingBounds({ metadata, datasetId }: { metadata: Metadata; datasetId: string }) {
   const map = useMap();
@@ -19,7 +19,7 @@ function RecordingBounds({ metadata, datasetId }: { metadata: Metadata; datasetI
   return null;
 }
 
-export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'builtin' }: Props) {
+export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'builtin', motionEnabled = true, motionEpoch = 0 }: Props) {
   const [tileError, setTileError] = useState(false);
   const { south, north, west, east } = metadata.bounds;
   return <section className="map-region" aria-label="Vessel map">
@@ -32,7 +32,7 @@ export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'bu
       <ScaleControl position="bottomleft" />
       {frame?.vessels.map(vessel => <VesselTrails key={vessel.id} vessel={vessel} selected={vessel.id === selected} />)}
       {frame?.vessels.map(vessel => <VesselMarker key={vessel.id} vessel={vessel}
-        selected={vessel.id === selected} onSelect={onSelect} />)}
+        selected={vessel.id === selected} onSelect={onSelect} frame={frame} motionEnabled={motionEnabled} motionEpoch={motionEpoch} />)}
     </MapContainer>
     {tileError && <p className="tile-warning" role="alert">Some map tiles could not load. Vessel positions remain available.</p>}
   </section>;

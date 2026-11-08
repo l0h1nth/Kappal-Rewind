@@ -5,6 +5,7 @@ import type { Metadata, ReplayFrame, Vessel } from '../src/types';
 export const metadata: Metadata = {
   start: '2026-11-02T03:30:00Z', end: '2026-11-02T03:59:59Z',
   recording_seconds: 1800, vessel_count: 20, record_count: 35780,
+  vessel_ids: Array.from({ length: 20 }, (_, i) => `T${String(i + 1).padStart(3, '0')}`),
   bounds: { south: 13.03159, north: 13.109132, west: 80.29829, east: 80.371457 },
 };
 export const vessel = (id: string, lat: number, lon: number, heading = 0): Vessel => ({

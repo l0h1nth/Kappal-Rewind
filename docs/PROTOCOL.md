@@ -70,7 +70,7 @@ Omit the query for the original assignment, or connect to
 (the server-issued 32 lowercase hex ID). Each socket owns its selected store,
 clock and window cache; every new connection starts paused at 0, speed 1.
 State frames include `dataset_id`; commands are unchanged. `/api/meta` keeps its
-original response. `GET /api/replay/{dataset_id}/meta` returns selected UTC
+original fields and adds `vessel_ids` for local discovery. `GET /api/replay/{dataset_id}/meta` returns selected UTC
 start/end, recording_seconds, counts, bounds, vessel_ids, dataset_id and name.
 Malformed IDs return HTTP 422, unknown IDs 404, unusable Parquet a generic 500.
 Invalid socket selections receive an error and close code 1008, leaving other
@@ -91,3 +91,7 @@ normal disconnect, failed initialization/send or cancellation. Switching away
 closes the previous socket; deletion is allowed after that close is processed.
 An in-progress delete rejects new socket selections with an error and close 1008.
 Other sessions are unaffected. HTTP deletion/recovery: [recordings](DATASETS.md#e4--permanent-deletion).
+
+I1 adds display-only catch-up marker transitions; frame values, replay clock and
+trail construction above are unchanged. Details show the current observation
+while the marker eases between confirmed fixes; see [motion tradeoffs](DECISIONS.md#i1--animate-confirmed-display-positions-only).

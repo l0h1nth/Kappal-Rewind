@@ -17,7 +17,7 @@ export function App() {
   const [recording, setRecording] = useState({ id: 'builtin', name: 'Built-in assignment' });
   const [requested, setRequested] = useState(recording);
   const [switching, setSwitching] = useState(false);
-  const { frame, status, error, busy, send, reconnect } = useReplaySocket(recording.id);
+  const { frame, status, error, busy, motionEpoch, send, reconnect } = useReplaySocket(recording.id);
 
   useEffect(() => {
     let active = true;
@@ -68,9 +68,9 @@ export function App() {
     </div>}
     {error && status === 'connected' && <p className="notice" role="alert">{error}</p>}
     <div className="workspace">
-      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording.id} /> :
+      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording.id} motionEnabled={!busy} motionEpoch={motionEpoch} /> :
         <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
-      <VesselPanel selected={selected} frame={frame} connected={status === 'connected'} />
+      <VesselPanel vesselIds={metadata?.vessel_ids ?? []} datasetId={recording.id} onSelect={setSelected} selected={selected} frame={frame} connected={status === 'connected'} />
     </div>
     <Timeline key={recording.id} frame={frame} metadata={metadata} connected={status === 'connected'} busy={busy} send={send} />
     <footer>

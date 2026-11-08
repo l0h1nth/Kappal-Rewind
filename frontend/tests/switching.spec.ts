@@ -5,6 +5,7 @@ import type { ReplayFrame } from '../src/types';
 const A = 'a'.repeat(32), B = 'b'.repeat(32);
 const meta = (id: string) => ({ ...metadata, dataset_id: id, name: `${id[0]}.csv`,
   start: '2024-01-01T00:00:00Z', end: id === A ? '2024-01-01T00:00:04Z' : '2024-01-01T00:00:02Z',
+  vessel_ids: id === A ? ['LONDON'] : ['TOKYO', 'TOKYO2'],
   recording_seconds: id === A ? 5 : 3, vessel_count: id === A ? 1 : 2, record_count: 5,
   bounds: id === A ? { south: 51.49, north: 51.52, west: -.12, east: -.08 }
     : { south: 35.66, north: 35.69, west: 139.69, east: 139.72 } });
@@ -163,4 +164,24 @@ test('uploaded controls use dynamic endpoints and reject frames for a different 
   server.sockets.get(A)!.send(JSON.stringify(frame(B)));
   await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('error');
   await expect(page.locator('.vessel-marker')).toHaveCount(0);
+});
+
+
+test('vessel search replaces metadata IDs and clears the filter after switching', async ({ page }) => {
+  await prepare(page);
+  await page.getByText('Find a vessel (20)', { exact: true }).click();
+  await page.getByLabel('Search vessel ID').fill('t012');
+  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
+  await expect(page.locator('.vessel-panel h2')).toHaveText('T012');
+  await replay(page, A).click(); await loaded(page, A);
+  await page.getByText('Find a vessel (1)', { exact: true }).click();
+  await expect(page.getByLabel('Search vessel ID')).toHaveValue('');
+  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button', { name: /LONDON/ }).click();
+  await expect(page.getByTitle('Vessel LONDON')).toHaveClass(/is-selected/);
+  await replay(page, B).click(); await loaded(page, B);
+  await page.getByText('Find a vessel (2)', { exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Matching vessels' })).not.toContainText('LONDON');
+  await page.getByLabel('Search vessel ID').fill('tokyo2');
+  await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
+  await expect(page.locator('.vessel-panel h2')).toHaveText('TOKYO2');
 });

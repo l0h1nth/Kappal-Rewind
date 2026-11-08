@@ -22,9 +22,10 @@ def test_startup_loads_once_and_metadata_reuses_dataset(tmp_path, monkeypatch):
                     response = await client.get("/api/meta")
                     assert response.status_code == 200
                     body = response.json()
-                    assert set(body) == {"start", "end", "recording_seconds", "vessel_count", "record_count", "bounds"}
+                    assert set(body) == {"start", "end", "recording_seconds", "vessel_count", "vessel_ids", "record_count", "bounds"}
                     assert body["record_count"] == 2
                     assert body["vessel_count"] == 1
+                    assert body["vessel_ids"] == ["A"]
                     assert body["recording_seconds"] == 2
                     assert body["bounds"] == {"south": 13, "north": 14, "west": 80, "east": 80}
                     assert body["start"] == START.isoformat()

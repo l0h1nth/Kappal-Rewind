@@ -175,3 +175,13 @@
   import retains the lock/spool through cancellation cleanup; SQL stages can finish
   before a disconnect is observed. Two settings can lower the tested 50 MiB/1M
   ceilings. No new permanent database, partition scheme or job service is needed.
+
+## I1 — animate confirmed display positions only
+- **Decision:** Leaflet marker refs ease between received consecutive observations
+  over 1,000/speed ms; the server clock, frame coordinates, headings and trails stay exact.
+- **Reason:** current messages contain no confirmed future fix. Prediction would
+  require invented data; a catch-up transition needs neither a protocol change nor a new clock.
+- **Alternative:** instant marker updates or buffered future-frame playback.
+- **Tradeoff:** visual position can lag by one observation interval. Missing/skipped
+  seconds, commands, speed changes, >100m steps and date-line crossings snap instead;
+  100m is a conservative visual guard, not data validation. Reduced motion snaps too.

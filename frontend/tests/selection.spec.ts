@@ -79,7 +79,7 @@ test('nearby markers, trails, zoom, pan and selection after seeks/gaps stay usab
 test('100-vessel 10× frames retain marker identities and first-click selection', async ({ page }) => {
   const vessels = Array.from({ length: 100 }, (_, i) => vessel(`L${i}`, 13.04 + Math.floor(i / 10) * .006, 80.305 + (i % 10) * .006));
   const frame = { ...initial, playing: true, speed: 10, vessels };
-  const server = await setup(page, { metadata: { ...metadata, vessel_count: 100 }, frame: { ...frame, playing: false } });
+  const server = await setup(page, { metadata: { ...metadata, vessel_count: 100, vessel_ids: vessels.map(v => v.id) }, frame: { ...frame, playing: false } });
   await page.getByLabel('Playback speed').selectOption('10');
   await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();

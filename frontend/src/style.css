@@ -121,3 +121,12 @@ footer { min-height: 48px; display: flex; justify-content: space-between; align-
 .delete-action { color: #f3aaa4; margin-left: .6rem; }
 .delete-confirmation { padding: 1rem; margin-block: 1rem; border: 1px solid #b4776f; border-radius: .5rem; overflow-wrap: anywhere; }
 .delete-confirmation p { margin-block: .65rem; }
+
+.vessel-search { margin-bottom: 20px; font-size: 13px; }
+.vessel-search summary { cursor: pointer; color: #c8df8d; }
+.vessel-search label { display: block; margin: 12px 0 6px; }
+.vessel-search input { width: 100%; min-width: 0; padding: 8px; font: inherit; background: #0c242b; color: #e9eee8; border: 1px solid #617a7c; border-radius: 4px; }
+.vessel-search ul { list-style: none; padding: 0; margin: 8px 0; max-height: 180px; overflow-y: auto; }
+.vessel-search button { width: 100%; text-align: left; padding: 8px; margin: 2px 0; overflow-wrap: anywhere; }
+.vessel-search button[aria-pressed=true] { border-color: #c8df8d; }
+.vessel-search small { display: block; color: #a3b7b7; margin-top: 3px; }

@@ -29,6 +29,7 @@ export interface Metadata {
   end: string;
   recording_seconds: number;
   vessel_count: number;
+  vessel_ids?: string[]; // Optional for legacy metadata; current APIs supply all IDs.
   record_count: number;
   bounds: { south: number; north: number; west: number; east: number };
 }
@@ -64,6 +65,9 @@ export function parseMetadata(v: unknown): Metadata {
   if (object(v) && instant(v.start) && instant(v.end) && integer(v.recording_seconds) &&
       v.recording_seconds > 0 && Date.parse(v.end) - Date.parse(v.start) === (v.recording_seconds - 1) * 1000 &&
       integer(v.vessel_count) && v.vessel_count > 0 && integer(v.record_count) && v.record_count > 0 &&
+      (v.vessel_ids === undefined || (Array.isArray(v.vessel_ids) &&
+        v.vessel_ids.length === v.vessel_count && v.vessel_ids.every(id => typeof id === 'string' && id.length > 0) &&
+        new Set(v.vessel_ids).size === v.vessel_ids.length)) &&
       object(v.bounds) && inRange(v.bounds.south, -90, 90) && inRange(v.bounds.north, -90, 90) &&
       v.bounds.south <= v.bounds.north && inRange(v.bounds.west, -180, 180) &&
       inRange(v.bounds.east, -180, 180) && v.bounds.west <= v.bounds.east) {

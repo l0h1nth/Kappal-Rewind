@@ -55,6 +55,7 @@ def create_app(
             "end": dataset.end,
             "recording_seconds": int((dataset.end - dataset.start).total_seconds()) + 1,
             "vessel_count": len(dataset.observations),
+            "vessel_ids": dataset.vessel_ids,
             "record_count": dataset.record_count,
             "bounds": dataset.bounds,
         }

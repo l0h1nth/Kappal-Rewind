@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is the focused vessel selection responsiveness fix.
+Python/FastAPI and WebSockets. Current authorized scope is I1: smooth playback and vessel interaction.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -87,12 +87,18 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 ### Further E5 scaling work (deferred)
 - [ ] Authorize any wider benchmark, partitioning or infrastructure work separately.
 
+## I1 — Smooth playback and vessel interaction
+- [x] Animate confirmed consecutive display positions without changing recorded values or the server clock.
+- [x] Cancel/snap across commands, gaps, discontinuities, disconnect and recording changes; preserve trails/map navigation.
+- [x] Add local metadata-ID vessel search, including absent observations and dataset filter reset.
+- [x] Verify 211 backend/55 browser tests, build, main Docker/live replay, source integrity and independent reviews.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6, E1–E4 and E5a are complete with independent reviews appropriate to each scope.
-Stop after the vessel selection fix, before further E5 work or Phase 7 final verification,
+**Review gate:** Phases 1–6, E1–E4, E5a and I1 are complete with independent reviews appropriate to each scope.
+Stop after I1, before further E5 work or Phase 7 final verification,
 screenshot, repository cleanup and submission preparation.

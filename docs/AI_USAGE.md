@@ -243,3 +243,19 @@ this file records contributions and reviewer scope.
   20/100-vessel playback using a new upload only in the isolated test volume.
   Browser instrumentation checked marker identity, click feedback and animation
   frame intervals. Tiles were mocked; no human verification is claimed.
+
+## I1 — 8 Nov 2026
+
+- Codex inspected replay/Leaflet data flow, added confirmed-position animation,
+  command cancellation and metadata-based local vessel search, and wrote controlled
+  animation-clock browser tests plus recording-switch/search regressions. Applied
+  replay-verification/build-journal skills and consulted official MDN animation-frame
+  and React effect-cleanup documentation.
+- Independent replay review executed 58 replay/socket/metadata tests; release review
+  executed build, two metadata tests, live metadata/health, Compose, source hash and
+  whitespace checks. Neither reviewer edited implementation or claimed browser runs.
+- Codex executed 211 backend and 55 Firefox tests, production build, main Docker
+  rebuild, WebSocket regression and live Firefox checks on builtin/50-vessel uploaded
+  playback. Animation callback instrumentation checked pause/switch cleanup; temporary
+  mobile visual QA was inspected with mocked tiles. No human verification or general
+  performance improvement is claimed.

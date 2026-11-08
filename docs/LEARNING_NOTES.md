@@ -261,3 +261,24 @@ preserve identity ([React state preservation](https://react.dev/learn/preserving
 Replay frames update observations, while local selection persists through gaps;
 selection needs no server query or acknowledgement. Interview question: why can
 replacing a child DOM node lose a click even when its React component stays mounted?
+
+## I1 — motion and vessel discovery
+
+- [useMarkerMotion](../frontend/src/hooks/useMarkerMotion.ts) interpolates only the
+  display between two received consecutive fixes. A fraction in [0,1] moves the
+  Leaflet marker; it never writes intermediate values to the frame or source.
+  [requestAnimationFrame](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
+  schedules repaints, not replay seconds. Duration is 1,000/speed ms; gaps and large jumps snap.
+- [Effect cleanup](https://react.dev/reference/react/useEffect) cancels the pending
+  callback on frame replacement/unmount. Commands increment a revision immediately,
+  preventing an animation even if React batches the command and its response.
+- React renders confirmed frames and local selection; animation ticks update a
+  Leaflet ref without React state. Stable keys preserve markers and the mounted map;
+  selection rerenders do not restart motion. No new memoization was introduced.
+- [VesselSearch](../frontend/src/components/VesselSearch.tsx) filters metadata IDs,
+  calls the same local selection setter as map clicks, and labels absent observations.
+  Its dataset key clears the filter on switching. Search does not query the backend.
+
+Interview questions: Why does catch-up animation lag instead of predict? Why can
+consecutive frame numbers still be a seek? Why keep details/trails separate from
+animated display coordinates? What does an effect cleanup cancel?

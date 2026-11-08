@@ -1,11 +1,14 @@
+import { VesselSearch } from './VesselSearch';
 import { istTime } from '../format';
 import type { ReplayFrame } from '../types';
 
-export function VesselPanel({ selected, frame, connected }: {
+export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, onSelect }: {
+  vesselIds: string[]; datasetId: string; onSelect: (id: string) => void;
   selected: string | null; frame: ReplayFrame | null; connected: boolean;
 }) {
   const vessel = frame?.vessels.find(vessel => vessel.id === selected);
   return <aside className="vessel-panel" aria-label="Vessel details">
+    <VesselSearch key={datasetId} vesselIds={vesselIds} frame={frame} selected={selected} onSelect={onSelect} />
     <p className="eyebrow">SELECTED VESSEL</p>
     <h2>{selected ?? 'Vessel details'}</h2>
     {!selected ? <p className="panel-note">Select a vessel on the map.</p> :

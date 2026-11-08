@@ -23,6 +23,7 @@ export function useReplaySocket(datasetId = 'builtin') {
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
   const [frame, setFrame] = useState<ReplayFrame | null>(null);
+  const [motionEpoch, setMotionEpoch] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionDataset, setConnectionDataset] = useState(datasetId);
@@ -149,6 +150,7 @@ export function useReplaySocket(datasetId = 'builtin') {
   const send = useCallback((command: ReplayCommand) => {
     if (socketRef.current?.readyState !== WebSocket.OPEN || !frameRef.current || pendingRef.current ||
         (frameRef.current.dataset_id ?? 'builtin') !== datasetId) return false;
+    setMotionEpoch(value => value + 1); // Cancels even when command/response renders are batched.
     setBusy(true);
     setError(null);
     if (command.type === 'seek') {
@@ -162,5 +164,5 @@ export function useReplaySocket(datasetId = 'builtin') {
 
   const current = connectionDataset === datasetId;
   return { frame: current ? frame : null, status: current ? status : 'connecting',
-    error: current ? error : null, busy: current && busy, send, reconnect: () => setAttempt(value => value + 1) };
+    error: current ? error : null, motionEpoch, busy: current && busy, send, reconnect: () => setAttempt(value => value + 1) };
 }
