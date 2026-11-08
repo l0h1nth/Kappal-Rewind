@@ -3,6 +3,11 @@
 Human verification is not claimed. Test outcomes and failures belong in BUILD_LOG;
 this file records contributions and reviewer scope.
 
+Current implementation includes the original assignment, E1–E5a, I1–I3, Coastal
+Editorial UI, ship/full-route visualization and the independent-column/dialog fix.
+Earlier sections are dated history, including their then-current verification
+limits; the Phase 7 entry records final readiness checks.
+
 ## Phase 1 — 6 Nov 2026
 - Codex authored the foundation, audit/tests, container setup, agent/skill definitions
   and documentation. Independent session subagents followed project data/release
@@ -327,3 +332,9 @@ this file records contributions and reviewer scope.
 - Independent data/replay reviewers executed nine route tests and checked exact normalized parity, caps, gaps and cancellation; release review identified checkbox CSS and inspected real rendered screenshots. Codex corrected that issue and the production-only path-class initialization discrepancy, then ran 225 backend/78 browser tests, build, main Docker/WebSocket and actual real-OSM browser checks. Fixtures mock API/socket/tile responses; separate main checks use real recordings. No human verification or rendering-performance improvement is claimed.
 
 - **8 Nov 2026, layout/dialog fix:** Codex measured the live grid/DOM before editing, implemented independent replay columns/native recording dialog and six new browser regressions, then executed 84 Firefox tests, build and main Docker/real replay/40-state layout checks. Read-only replay/release reviewers checked lifecycle, layout and accessibility; release review independently probed native keyboard scrolling. Actual main screenshots use real OSM requests; long IDs use controlled test fixtures. No backend or source-data changes, human verification claim or publishing.
+
+## Phase 7 — 8 Nov 2026
+
+- Codex reread the original assignment/current source and Git history, reconciled current documentation without rewriting dated records, and rewrote the README. Captured genuine production Firefox replay/library screenshots with real OSM tiles; PNG compression preserves image data losslessly. No generated UI images or new product features.
+- Codex executed 225 backend/84 browser tests, typecheck/build, a no-cache Docker build from a fresh public clone, isolated real import/deletion/persistence checks and main read-only replay/layout checks. Full-source Parquet parity and source bytes were verified; destructive checks used only new isolated recordings. No human verification is claimed.
+- Independent data/replay/release agents performed read-only final checks, including data tests, replay regressions, deployment/source hygiene and final README/screenshots. Actual commands/results are recorded in BUILD_LOG. No commit, merge, push or submission was performed by Codex.

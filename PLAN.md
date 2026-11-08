@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is the independent replay-column and recording-dialog layout fix; final submission remains deferred.
+Python/FastAPI and WebSockets. Current authorized scope is Phase 7 final verification, screenshots and submission readiness. Publishing and sending the submission require separate permission.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -127,12 +127,15 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [x] Replace expanding metadata with an accessible responsive dialog, preserving recording/replay behavior.
 - [x] Verify 84 browser tests, build, main Docker, four-width/40-state measurements, screenshots and independent reviews.
 
-## 7. Final Verification & Submission
-- [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
-- [ ] README has run/data/scaling/resources sections and a final application screenshot.
-- [ ] Logs and learning notes reflect actual checks; release review documents limitations.
-- [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
+## 7. Final Verification & Submission Readiness
+- [x] Verify 225 backend/84 browser tests, typecheck/build, source integrity and main Docker/HTTP/WebSockets.
+- [x] Build a fresh public clone without Docker cache; verify isolated upload/deletion, exact Parquet read-back and persistent-volume container recreation.
+- [x] Capture genuine production replay/library PNGs and replace the README with concise run/data/scaling/AI sections.
+- [x] Complete final documentation/link/hygiene checks and independent data/replay/release sign-off.
 
-**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2, I3 and both frontend redesign stages are complete with independent reviews appropriate to each scope.
-Stop after the replay-column/dialog fix, before further E5 work or Phase 7 final verification,
-screenshot, repository cleanup and submission preparation.
+Publishing and sending the submission are not part of automated completion; neither
+commit, merge, push nor email is authorized here.
+
+**Review gate:** Phase 7 readiness verification, final screenshots and concise
+documentation reconciliation are complete. Stop here; publishing/submission still
+requires user action. No new features or scaling experiments.

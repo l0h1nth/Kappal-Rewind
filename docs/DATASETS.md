@@ -70,7 +70,7 @@ preserves the existing named volume; it does not reconstruct uploads from memory
 
 ## E3 — replay stored observations
 
-Use **Replay** on a library card or **Replay built-in assignment** above the map.
+Use **Replay** on a library card or **Replay built-in assignment** in Recordings.
 The current filename/ID stays visible; a successful switch starts paused at zero,
 1×. Uploading alone still leaves playback unchanged. Selection and error behavior:
 [protocol](PROTOCOL.md#e3--select-a-recording-when-connecting).
@@ -79,11 +79,11 @@ FastAPI resolves IDs through the existing catalog, then aggregate-checks normali
 values/counts/IDs/UTC range and derives bounds without fetching all rows into
 Python. Replay queries all vessels once per needed `[max(start,t−59s),t]` window,
 ordered by timestamp/ID. Current fixes require an exact timestamp; gaps stay gaps.
-Only one requested window is cached per connection, replaced on seek/progress;
-no full-recording Python load, per-vessel query or shared active dataset exists.
-DuckDB may scan Parquet rows beyond the returned window. Row-group pruning has
-not been benchmarked; E5a records limited window timing samples below. The current 50 MiB/1,000,000-row limits
-apply. External file mutation during active replay is unsupported.
+Each connection retains one window, reusing forward overlap up to 60,000 cached
+observations; unrelated/backward seeks reconstruct. Larger windows return complete
+but uncached. No full-recording Python load or shared active dataset exists.
+DuckDB can scan beyond returned rows; I3 measured timestamp pushdown and row-group
+pruning in [benchmarks](BENCHMARKS.md). The current 50 MiB/1,000,000-row limits apply. External file mutation during active replay is unsupported.
 
 Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
 ```sh
@@ -94,12 +94,13 @@ Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
 
 **Delete** on an upload card opens a filename/ID confirmation. Pending requests
 cannot be submitted twice; success refreshes the list and preserves other previews
-and playback. For the currently loaded recording, **Permanently delete** is
-blocked. Use **Switch to built-in assignment** inside the confirmation, wait for
-**Built-in assignment loaded**, then confirm deletion. Switching alone does not
-delete anything. Metadata/connection failures offer retry or reconnect locally.
-A finished replay still owns a live socket; close or switch away in every tab using
-it. Other-tab conflicts remain 409; disconnect processing may take a moment.
+and unrelated playback. Confirming deletion of the locally loaded recording closes
+this tab's replay, clears its markers/trails/selection and leaves an empty workspace;
+it never automatically loads the built-in recording. Other clients, still-closing
+sessions or in-flight route reads can block deletion with 409; retry after those
+references finish. A finished replay still owns a socket, so other tabs must close
+or switch away explicitly. Failures are shown in the confirmation without hiding
+whether the recording was removed; no automatic dataset switch is implied.
 
 `DELETE /api/datasets/{id}` returns 200 `{dataset_id, deleted:true}`, 403 for
 `builtin`, 422 for malformed IDs, 404 for absent/unavailable metadata, and 409
