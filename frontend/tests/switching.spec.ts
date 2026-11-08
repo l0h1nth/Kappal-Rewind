@@ -25,6 +25,7 @@ async function prepare(page: Page) {
   const builtin = await setup(page);
   const opened: string[] = [], sockets = new Map<string, WebSocketRoute>();
   await page.route('**/api/datasets', route => route.fulfill({ json: [record(A), record(B)] }));
+  await page.route('**/api/datasets/*', route => route.fulfill({ json: record(route.request().url().includes(A) ? A : B) }));
   await page.route('**/api/replay/*/meta', route => route.fulfill({ json: meta(route.request().url().includes(A) ? A : B) }));
   await page.routeWebSocket('**/ws/replay*', route => {
     const id = new URL(route.url()).searchParams.get('dataset_id') ?? 'builtin';
@@ -184,4 +185,42 @@ test('vessel search replaces metadata IDs and clears the filter after switching'
   await page.getByLabel('Search vessel ID').fill('tokyo2');
   await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
   await expect(page.locator('.vessel-panel h2')).toHaveText('TOKYO2');
+});
+
+test('current recording information shows exact metadata, timezone and optional validation counts', async ({ page }) => {
+  await prepare(page);
+  const info = page.getByLabel('Recording information', { exact: true });
+  await expect(info.locator('summary')).toContainText('Built-in assignment · 20 vessels · 30m · 35,780 observations');
+  await info.locator('summary').click();
+  await expect(info).toContainText('tracks.csv');
+  await expect(info).toContainText('Recording start · IST (Asia/Kolkata)');
+  await expect(info).toContainText('02 Nov 2026, 09:00:00');
+  await expect(info).toContainText('Detailed validation counts are unavailable');
+  await page.route(`**/api/datasets/${A}`, route => route.fulfill({ json: { ...record(A),
+    validation: { ...record(A).validation, source_row_count: 7, naive_timestamp_rows: 7,
+      discarded_row_count: 2, exact_duplicate_rows: 2, missing_observation_seconds: 0 } } }));
+  await replay(page, A).click(); await loaded(page, A);
+  await expect(info.locator('summary')).toHaveText('Uploaded recording · 1 vessels · 5s · 5 observations');
+  await info.locator('summary').click();
+  await expect(info).toContainText('a.csv');
+  await expect(info.locator('time').first()).toHaveText('01 Jan 2024, 05:30:00');
+  await expect(info.locator('time').last()).toHaveText('01 Jan 2024, 05:30:04');
+  await expect(info.locator('dl div').filter({ has: page.getByText('Discarded duplicate observations', { exact: true }) }).locator('dd')).toHaveText('2');
+});
+
+test('late recording information cannot replace another recording and metadata failure can retry locally', async ({ page }) => {
+  await prepare(page);
+  let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`**/api/datasets/${A}`, async route => { await held; await route.fulfill({ json: record(A) }); });
+  await replay(page, A).click(); await loaded(page, A);
+  await page.route(`**/api/datasets/${B}`, route => route.fulfill({ status: 503, json: { detail: 'unavailable' } }));
+  await replay(page, B).click(); await loaded(page, B);
+  const info = page.getByLabel('Recording information', { exact: true });
+  await info.locator('summary').click();
+  await expect(info).toContainText('Validation counts unavailable'); release();
+  await expect(info).toContainText('b.csv'); await expect(info).not.toContainText('a.csv');
+  await page.route(`**/api/datasets/${B}`, route => route.fulfill({ json: record(B) }));
+  await page.getByRole('button', { name: 'Retry recording information' }).click();
+  await expect(info).toContainText('Missing vessel-seconds');
+  await expect(play(page)).toBeEnabled();
 });

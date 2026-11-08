@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { VesselMap } from './components/VesselMap';
 import { Timeline } from './components/Timeline';
 import { VesselPanel } from './components/VesselPanel';
+import { RecordingInfo } from './components/RecordingInfo';
 import { UploadCsv } from './components/UploadCsv';
 import { DatasetLibrary } from './components/DatasetLibrary';
 import { istTime } from './format';
@@ -59,6 +60,7 @@ export function App() {
       <button disabled={recording.id === 'builtin' && !switching}
         onClick={() => setRequested({ id: 'builtin', name: 'Built-in assignment' })}>Replay built-in assignment</button>
     </div>
+    {metadata && <RecordingInfo key={`info:${recording.id}`} datasetId={recording.id} name={recording.name} metadata={metadata} />}
     {switching && metadata && <p role="status">Loading recording… Current replay continues until metadata is ready.</p>}
     {metadataError && metadata && <div className="notice" role="alert"><span>{metadataError} Current replay was kept.</span>
       <button onClick={() => setMetadataAttempt(value => value + 1)}>Retry recording</button></div>}

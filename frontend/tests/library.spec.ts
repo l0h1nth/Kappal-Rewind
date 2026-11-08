@@ -190,6 +190,7 @@ for (const singleSecond of [false, true]) {
     await expect(page.getByLabel('Current recording')).toContainText(A);
     if (!singleSecond) await page.getByRole('button', { name: '▶ Play', exact: true }).click();
     await page.route(`**/api/datasets/${A}`, route => {
+      if (route.request().method() !== 'DELETE') return route.fulfill({ json: recording() });
       deletes++; removed = true; return route.fulfill({ json: { dataset_id: A, deleted: true } });
     });
     await remove(page, A).click();
@@ -220,7 +221,7 @@ for (const singleSecond of [false, true]) {
 test('another tab conflict remains visible and does not silently switch unrelated playback', async ({ page }) => {
   const server = await setup(page); await list(page);
   let deletes = 0;
-  await page.route(`**/api/datasets/${A}`, route => { deletes++; return route.fulfill({ status: 409, json: { detail: 'busy' } }); });
+  await page.route(`**/api/datasets/${A}`, route => { if (route.request().method() !== 'DELETE') return route.fulfill({ json: recording() }); deletes++; return route.fulfill({ status: 409, json: { detail: 'busy' } }); });
   await remove(page, A).click();
   await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
   await expect(library(page).getByRole('alert')).toContainText('another tab');
@@ -261,7 +262,7 @@ test('failed builtin switch can retry metadata and reconnect locally without sen
   await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
   await expect(page.getByLabel('Current recording')).toContainText(A);
   let deletes = 0;
-  await page.route(`**/api/datasets/${A}`, route => { deletes++; return route.fulfill({ json: { dataset_id: A, deleted: true } }); });
+  await page.route(`**/api/datasets/${A}`, route => { if (route.request().method() !== 'DELETE') return route.fulfill({ json: recording() }); deletes++; return route.fulfill({ json: { dataset_id: A, deleted: true } }); });
   await remove(page, A).click();
   await page.route('**/api/meta', route => route.fulfill({ status: 503, json: { detail: 'metadata offline' } }));
   await confirmation(page).getByRole('button', { name: 'Switch to built-in assignment' }).click();

@@ -22,6 +22,7 @@ export async function setup(page: Page, options: { metadataError?: boolean; tile
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/datasets', route => route.request().method() === 'GET'
     ? route.fulfill({ json: [] }) : route.fallback());
+  await page.route('**/api/datasets/*', route => route.fulfill({ status: 404, json: { detail: 'Recording unavailable in this fixture' } }));
   await page.route('**/api/upload-limits', route => route.fulfill({ json: { max_bytes: 52428800, max_rows: 1000000 } }));
   await page.route('**/api/meta', route => route.fulfill({
     status: options.metadataError ? 503 : 200, json: options.metadata ?? metadata,

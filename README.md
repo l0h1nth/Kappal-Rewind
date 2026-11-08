@@ -42,7 +42,9 @@ previews and Replay for stored recordings. Switches start paused with dynamic
 time/bounds; return to the built-in assignment above the map. Uploading alone
 keeps the current replay. Uploads support up to **50 MiB / 1,000,000 source rows**
 with disk-backed normalization. Confirmed permanent deletion blocks active recordings
-(including paused sessions); run one backend worker. Limits, recovery and APIs: [recordings](docs/DATASETS.md).
+(including paused sessions); run one backend worker. Upload feedback distinguishes transfer
+from processing; expand recording information above the map for counts and times.
+Limits, recovery and APIs: [recordings](docs/DATASETS.md).
 
 ## Data problems found
 35,820 rows become 35,780 validated observations across 20 vessels / 1,800 seconds.

@@ -259,3 +259,20 @@ this file records contributions and reviewer scope.
   playback. Animation callback instrumentation checked pause/switch cleanup; temporary
   mobile visual QA was inspected with mocked tiles. No human verification or general
   performance improvement is claimed.
+
+## I2 — 8 Nov 2026
+
+- Codex inspected upload parsing/cancellation, normalization, catalog and Nginx, then
+  implemented XHR transfer feedback/cancel and current-recording metadata UI without
+  changing backend/storage rules. Applied build-journal/replay-verification skills
+  and consulted MDN XHR upload/progress documentation.
+- Codex executed 211 backend/60 Firefox tests, build and main Docker preservation
+  checks. A test-only throttled HTTP proxy exposed Firefox's delayed upload.load;
+  native byte progress now changes the busy stage at measured completion. Controlled
+  event tests are distinguished from real transfer/cancellation tests. Corrected the
+  new sibling key collision and method-insensitive deletion fixtures.
+- Independent replay review passed 56 tests; release review executed typecheck,
+  Compose/health/hash/whitespace checks and reviewed the event-order correction.
+  Real upload tests used an isolated persistent volume; main-recording metadata and
+  previews stayed unchanged. Tiles were mocked and temporary mobile QA inspected;
+  no human verification or general performance improvement is claimed.

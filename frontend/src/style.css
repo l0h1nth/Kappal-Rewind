@@ -130,3 +130,11 @@ footer { min-height: 48px; display: flex; justify-content: space-between; align-
 .vessel-search button { width: 100%; text-align: left; padding: 8px; margin: 2px 0; overflow-wrap: anywhere; }
 .vessel-search button[aria-pressed=true] { border-color: #c8df8d; }
 .vessel-search small { display: block; color: #a3b7b7; margin-top: 3px; }
+
+.upload-feedback { min-height: 26px; margin-top: 10px; }
+.upload-feedback progress { display: block; width: min(100%, 440px); height: 14px; accent-color: #c8df8d; margin: 10px 0; }
+.upload-feedback p { margin: 8px 0; }
+.recording-info { border: 1px solid #345057; border-radius: 6px; padding: 10px 14px; margin: 0 0 14px; font-size: 13px; }
+.recording-info summary { cursor: pointer; color: #c8df8d; overflow-wrap: anywhere; }
+.recording-info dd, .recording-info time { font-size: 13px; overflow-wrap: anywhere; }
+.recording-info p { color: #a3b7b7; }

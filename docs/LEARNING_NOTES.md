@@ -282,3 +282,23 @@ replacing a child DOM node lose a click even when its React component stays moun
 Interview questions: Why does catch-up animation lag instead of predict? Why can
 consecutive frame numbers still be a seek? Why keep details/trails separate from
 animated display coordinates? What does an effect cleanup cancel?
+
+## I2 — upload feedback and recording metadata
+
+- A multipart FormData body includes CSV bytes plus boundaries/headers; the browser
+  sets its Content-Type. Native [XHR upload events](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/upload)
+  report transferred request-body bytes when the total is computable. That percentage
+  measures transfer, not validation or Parquet conversion. Known 100% starts an
+  indeterminate wait; Firefox may delay upload.load until the final HTTP response.
+- UploadCsv uses idle/uploading/processing/completed/failed/cancelled states. Only a
+  validated successful response confirms completion. A synchronous request ref blocks
+  duplicate submits and ignores old callbacks; abort cancels the request on demand or
+  unmount. Server cleanup is cooperative, so retry may initially receive import-busy.
+  Lost confirmation or cancellation near publication requires refreshing before retry.
+- RecordingInfo combines current replay metadata with existing uploaded metadata
+  counts; it labels IST dates and unavailable builtin counts. A dataset key plus
+  aborted/ignored stale requests prevents information leaking across switches.
+
+Interview questions: Why is 100% uploaded not 100% imported? Why omit a progress
+value during processing? What prevents an aborted request from overwriting retry
+state? Why must an uncertain response not automatically trigger another import?
