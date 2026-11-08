@@ -170,17 +170,17 @@ test('uploaded controls use dynamic endpoints and reject frames for a different 
 
 test('vessel search replaces metadata IDs and clears the filter after switching', async ({ page }) => {
   await prepare(page);
-  await page.getByText('Find a vessel (20)', { exact: true }).click();
+  await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await page.getByLabel('Search vessel ID').fill('t012');
   await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();
   await expect(page.locator('.vessel-panel h2')).toHaveText('T012');
   await replay(page, A).click(); await loaded(page, A);
-  await page.getByText('Find a vessel (1)', { exact: true }).click();
+  await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await expect(page.getByLabel('Search vessel ID')).toHaveValue('');
   await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button', { name: /LONDON/ }).click();
   await expect(page.getByTitle('Vessel LONDON')).toHaveClass(/is-selected/);
   await replay(page, B).click(); await loaded(page, B);
-  await page.getByText('Find a vessel (2)', { exact: true }).click();
+  await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Matching vessels' })).not.toContainText('LONDON');
   await page.getByLabel('Search vessel ID').fill('tokyo2');
   await page.getByRole('list', { name: 'Matching vessels' }).getByRole('button').click();

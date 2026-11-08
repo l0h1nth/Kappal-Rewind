@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { VesselMap } from './components/VesselMap';
+import { VesselMap, type SearchFocus } from './components/VesselMap';
 import { Timeline } from './components/Timeline';
 import { VesselPanel } from './components/VesselPanel';
 import { RecordingInfo } from './components/RecordingInfo';
@@ -14,6 +14,7 @@ export function App() {
   const [metadataError, setMetadataError] = useState<string | null>(null);
   const [metadataAttempt, setMetadataAttempt] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [searchFocus, setSearchFocus] = useState<SearchFocus | null>(null);
   const [libraryRevision, setLibraryRevision] = useState(0);
   const [recording, setRecording] = useState({ id: 'builtin', name: 'Built-in assignment' });
   const [requested, setRequested] = useState(recording);
@@ -35,7 +36,7 @@ export function App() {
         const parsed = parseMetadata(body);
         if (active) {
           setMetadata(parsed); setRecording(requested);
-          if (requested.id !== recording.id) setSelected(null);
+          if (requested.id !== recording.id) { setSelected(null); setSearchFocus(null); }
           setSwitching(false);
         }
       })
@@ -43,6 +44,12 @@ export function App() {
       .finally(() => window.clearTimeout(timeout));
     return () => { active = false; window.clearTimeout(timeout); controller.abort(); };
   }, [metadataAttempt, requested]);
+
+  function selectFromSearch(id: string) {
+    setSelected(id);
+    const vessel = frame?.vessels.find(vessel => vessel.id === id);
+    setSearchFocus(vessel ? { datasetId: recording.id, lat: vessel.lat, lon: vessel.lon } : null);
+  }
 
   const time = frame ? istTime(frame.timestamp) : '—';
   const date = frame ? new Date(frame.timestamp).toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }) : 'Recorded vessel tracks';
@@ -70,9 +77,9 @@ export function App() {
     </div>}
     {error && status === 'connected' && <p className="notice" role="alert">{error}</p>}
     <div className="workspace">
-      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording.id} motionEnabled={!busy} motionEpoch={motionEpoch} /> :
+      {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording.id} motionEnabled={!busy} motionEpoch={motionEpoch} searchFocus={searchFocus} /> :
         <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
-      <VesselPanel vesselIds={metadata?.vessel_ids ?? []} datasetId={recording.id} onSelect={setSelected} selected={selected} frame={frame} connected={status === 'connected'} />
+      <VesselPanel vesselIds={metadata?.vessel_ids ?? []} datasetId={recording.id} onSelect={selectFromSearch} selected={selected} frame={frame} connected={status === 'connected'} />
     </div>
     <Timeline key={recording.id} frame={frame} metadata={metadata} connected={status === 'connected'} busy={busy} send={send} />
     <footer>

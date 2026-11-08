@@ -4,7 +4,9 @@ import type { Metadata, ReplayFrame } from '../types';
 import { VesselMarker } from './VesselMarker';
 import { VesselTrails } from './VesselTrails';
 
-interface Props { metadata: Metadata; frame: ReplayFrame | null; selected: string | null; onSelect: (id: string) => void; datasetId?: string; motionEnabled?: boolean; motionEpoch?: number }
+export interface SearchFocus { datasetId: string; lat: number; lon: number }
+
+interface Props { searchFocus?: SearchFocus | null; metadata: Metadata; frame: ReplayFrame | null; selected: string | null; onSelect: (id: string) => void; datasetId?: string; motionEnabled?: boolean; motionEpoch?: number }
 
 function RecordingBounds({ metadata, datasetId }: { metadata: Metadata; datasetId: string }) {
   const map = useMap();
@@ -19,13 +21,26 @@ function RecordingBounds({ metadata, datasetId }: { metadata: Metadata; datasetI
   return null;
 }
 
-export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'builtin', motionEnabled = true, motionEpoch = 0 }: Props) {
+// An explicit search choice is a one-shot request, independent of replay frames.
+function SearchMapFocus({ request, datasetId }: { request: SearchFocus | null; datasetId: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (request?.datasetId === datasetId) {
+      map.stop();
+      map.setView([request.lat, request.lon], Math.min(map.getZoom(), 14), { animate: false });
+    }
+  }, [map, request, datasetId]);
+  return null;
+}
+
+export function VesselMap({ metadata, frame, selected, onSelect, datasetId = 'builtin', motionEnabled = true, motionEpoch = 0, searchFocus = null }: Props) {
   const [tileError, setTileError] = useState(false);
   const { south, north, west, east } = metadata.bounds;
   return <section className="map-region" aria-label="Vessel map">
     <MapContainer className="vessel-map" bounds={[[south, west], [north, east]]}
       boundsOptions={{ padding: [32, 32], maxZoom: 14 }}>
       <RecordingBounds metadata={metadata} datasetId={datasetId} />
+      <SearchMapFocus request={searchFocus} datasetId={datasetId} />
       <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         eventHandlers={{ tileerror: () => setTileError(true) }} />

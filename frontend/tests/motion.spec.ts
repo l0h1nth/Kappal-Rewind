@@ -101,12 +101,16 @@ test('gaps, skipped seconds, discontinuities and disconnect never blend unrelate
 
 test('search selects absent metadata vessels locally and persists selection through observations', async ({ page }) => {
   const server = await setup(page);
-  await page.getByText('Find a vessel (20)', { exact: true }).click();
+  await expect(page.getByLabel('Search vessel ID')).toBeVisible();
   await page.getByLabel('Search vessel ID').fill('t015');
   const button = page.getByRole('list', { name: 'Matching vessels' }).getByRole('button');
   await expect(button).toHaveCount(1); await expect(button).toContainText('No current observation');
+  const originalMarker = page.getByTitle('Vessel T007');
+  const position = await originalMarker.getAttribute('style');
   await button.click(); await expect(page.locator('.vessel-panel h2')).toHaveText('T015');
+  await expect(originalMarker).toHaveAttribute('style', position!);
   await expect(page.getByText('No observation at this time.', { exact: true })).toBeVisible();
+  await expect(page.getByTitle('Vessel T015')).toHaveCount(0);
   server.send({ ...initial, vessels: [...initial.vessels, vessel('T015', 13.07, 80.34)] });
   await expect(page.getByTitle('Vessel T015')).toHaveClass(/is-selected/);
   await page.getByLabel('Search vessel ID').fill('no-match');

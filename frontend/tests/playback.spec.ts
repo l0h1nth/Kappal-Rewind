@@ -144,7 +144,7 @@ test('delayed acknowledgements preserve range and speed keyboard focus without a
 test('selected vessel values follow observations and disappear during a gap or disconnect', async ({ page }) => {
   const server = await setup(page);
   const panel = page.getByRole('complementary', { name: 'Vessel details' });
-  await expect(panel).toContainText('Select a vessel on the map.');
+  await expect(panel).toContainText('Search by vessel ID or select a vessel on the map.');
   await page.getByTitle('Vessel T012').click();
   await expect(panel).toContainText('5.00 knots');
   await expect(panel).toContainText('90.0°');

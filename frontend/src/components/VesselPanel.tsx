@@ -11,7 +11,7 @@ export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, 
     <VesselSearch key={datasetId} vesselIds={vesselIds} frame={frame} selected={selected} onSelect={onSelect} />
     <p className="eyebrow">SELECTED VESSEL</p>
     <h2>{selected ?? 'Vessel details'}</h2>
-    {!selected ? <p className="panel-note">Select a vessel on the map.</p> :
+    {!selected ? <p className="panel-note">Search by vessel ID or select a vessel on the map.</p> :
       !connected || !frame ? <p className="panel-note">Current observation unavailable. Waiting for the replay connection.</p> :
       !vessel ? <p className="missing-observation">No observation at this time.</p> : <>
         <p className="observation-status">Current observation</p>
