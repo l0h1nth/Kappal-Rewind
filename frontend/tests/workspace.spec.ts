@@ -1,28 +1,34 @@
 import { expect, test } from '@playwright/test';
-import { setup, initial, metadata } from './fixtures';
+import { setup, initial, metadata, settledMapView } from './fixtures';
 
-for (const width of [1440, 900, 768, 390]) {
-  test(`workspace fits ${width}px with usable map, timeline and tab navigation`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
+for (const [width, height] of [[1440, 900], [1280, 800], [768, 1024], [390, 844]]) {
+  test(`Coastal views fit ${width}×${height} with readable controls and persistent map`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
     const server = await setup(page);
+    await page.evaluate(() => document.fonts.ready);
     const map = await page.locator('.leaflet-container').elementHandle();
     const bounds = (await page.locator('.leaflet-container').boundingBox())!;
     expect(bounds.height).toBeGreaterThan(300); expect(bounds.width).toBeGreaterThan(300);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (width > 800) {
-      expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
-      const sidebar = (await page.locator('.workspace-sidebar').boundingBox())!;
-      expect(sidebar.width).toBeGreaterThanOrEqual(300); expect(sidebar.width).toBeLessThanOrEqual(340);
-      expect(Math.abs(sidebar.y - bounds.y)).toBeLessThan(2);
+    expect(await page.locator('body').evaluate(e => parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(16);
+    expect(await page.locator('main').evaluate(e => getComputedStyle(e).backgroundColor)).not.toBe('rgb(12, 36, 43)');
+    if (width > 1100) {
+      const column = (await page.locator('.workspace-sidebar').boundingBox())!;
+      expect(column.width).toBeGreaterThan(340);
+      const workspace = (await page.locator('.workspace').boundingBox())!;
+      expect(bounds.width / workspace.width).toBeGreaterThan(.60);
+      expect(bounds.width / workspace.width).toBeLessThan(.70);
       const timeline = (await page.getByRole('region', { name: 'Playback controls' }).boundingBox())!;
-      expect(timeline.y).toBeGreaterThan(bounds.y + bounds.height); expect(timeline.y + timeline.height).toBeLessThanOrEqual(900);
+      expect(timeline.width).toBeGreaterThan(workspace.width - 2);
+      expect(timeline.y).toBeGreaterThan(bounds.y + bounds.height);
     }
-    const vessels = page.getByRole('tab', { name: 'Vessels', exact: true });
-    await vessels.focus(); await vessels.press('ArrowRight');
+    const replay = page.getByRole('tab', { name: 'Replay', exact: true });
+    await replay.focus(); await replay.press('ArrowRight');
     await expect(page.getByRole('tab', { name: 'Recordings', exact: true })).toBeFocused();
     await expect(page.getByRole('region', { name: 'My Recordings' })).toBeVisible();
+    await expect(page.locator('.leaflet-container')).not.toBeVisible();
     await page.getByRole('tab', { name: 'Recordings', exact: true }).press('Home');
-    await expect(vessels).toBeFocused(); await expect(page.getByRole('combobox', { name: 'Search vessel ID' })).toBeVisible();
+    await expect(replay).toBeFocused(); await expect(page.getByRole('combobox', { name: 'Search vessel ID' })).toBeVisible();
     expect(await map!.evaluate(e => e === document.querySelector('.leaflet-container'))).toBe(true);
     expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
   });
@@ -93,4 +99,41 @@ test('deletion waits for local close and immediately clears markers, trails and 
   }, { ...initial, dataset_id: id });
   await expect(page.getByRole('dialog')).not.toBeVisible(); expect(deletes).toBe(1);
   await expect(page.locator('.vessel-marker')).toHaveCount(0);
+});
+
+
+test('initial map metadata arriving in Recordings fits only after Replay becomes visible', async ({ page }) => {
+  const server = await setup(page, { metadataError: true });
+  let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/meta', async route => { await held; await route.fulfill({ json: metadata }); });
+  await page.getByRole('button', { name: 'Retry metadata' }).click();
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click(); release();
+  await expect(page.locator('.leaflet-container')).toHaveCount(1);
+  await expect(page.locator('.leaflet-container')).not.toBeVisible();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
+  await expect.poll(async () => {
+    const map = (await page.locator('.leaflet-container').boundingBox())!;
+    const boat = (await page.getByTitle('Vessel T007').boundingBox())!;
+    return boat.x > map.x && boat.x + boat.width < map.x + map.width && boat.y > map.y && boat.y + boat.height < map.y + map.height;
+  }).toBe(true);
+  expect(server.errors).toEqual([]);
+});
+
+test('switching views preserves the selected vessel and user pan/zoom without reconnecting', async ({ page }) => {
+  const server = await setup(page);
+  await page.getByTitle('Vessel T007').click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  const box = (await page.locator('.leaflet-container').boundingBox())!;
+  await page.mouse.move(box.x + 90, box.y + 90); await page.mouse.down();
+  await page.mouse.move(box.x + 150, box.y + 130, { steps: 8 }); await page.mouse.up();
+  await settledMapView(page);
+  const before = (await page.getByTitle('Vessel T007').boundingBox())!;
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
+  await expect.poll(async () => {
+    const after = (await page.getByTitle('Vessel T007').boundingBox())!;
+    return Math.max(Math.abs(after.x - before.x), Math.abs(after.y - before.y));
+  }).toBeLessThan(2);
+  await expect(page.getByTitle('Vessel T007')).toHaveClass(/is-selected/);
+  expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
 });

@@ -5,7 +5,7 @@ import { VesselPanel } from './components/VesselPanel';
 import { RecordingInfo } from './components/RecordingInfo';
 import { UploadCsv } from './components/UploadCsv';
 import { DatasetLibrary } from './components/DatasetLibrary';
-import { istTime } from './format';
+import { istTime, recordingDuration } from './format';
 import { useReplaySocket } from './hooks/useReplaySocket';
 import { parseMetadata, type Metadata } from './types';
 
@@ -24,7 +24,7 @@ export function App() {
   const [switching, setSwitching] = useState(false);
   const [tab, setTab] = useState<'vessels' | 'recordings'>('vessels');
   const [recordingDetailsOpen, setRecordingDetailsOpen] = useState(false);
-  const recordingsPanel = useRef<HTMLDivElement>(null);
+  const recordingsPanel = useRef<HTMLElement>(null);
   const [deleting, setDeleting] = useState(false);
   const deletingRef = useRef(false);
   const preflight = useRef<AbortController | null>(null);
@@ -83,13 +83,29 @@ export function App() {
   const activeMetadata = recording ? metadata : null;
 
   return <main>
+    <a className="skip-link" href="#page-content">Skip to content</a>
     <header className="app-header">
-      <div className="brand"><span className="wordmark">K / R</span><div><h1>Kappal <em>Rewind</em></h1><p>The sea has a replay button.</p></div></div>
-      <div className="header-recording" aria-label="Current recording"><span className="eyebrow">REPLAY WORKSPACE</span>
-        <strong>{recording?.name ?? 'No recording loaded'}</strong><small>{recording ? recording.id === 'builtin' ? 'Built-in assignment · tracks.csv' : recording.id : 'Choose a recording to start replay'}</small></div>
-      <div className="replay-time"><span>RECORDED TIME · IST</span><time aria-label="Current replay time" dateTime={frame?.timestamp}>{frame ? istTime(frame.timestamp) : '—'}</time></div>
-      <div className={`connection ${recording ? status : 'empty'}`} role="status" aria-label="Replay connection"><span className="connection-dot" />{recording ? status : 'No recording'}</div>
+      <div className="brand">
+        <svg className="brand-compass" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" /><path d="M24 3v7m0 28v7M3 24h7m28 0h7M31 17l-4 10-10 4 4-10z" /></svg>
+        <div><h1>Kappal Rewind</h1><p>The sea has a replay button.</p></div>
+      </div>
+      <div role="tablist" aria-label="Application views" className="view-navigation">
+        {(['vessels', 'recordings'] as const).map((name, index) => <button key={name} id={`${name}-tab`} role="tab"
+          aria-selected={tab === name} aria-controls={`${name}-tools`} tabIndex={tab === name ? 0 : -1}
+          onClick={() => setTab(name)} onKeyDown={event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
+            setTab(next === 0 ? 'vessels' : 'recordings');
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next]?.focus();
+          }}>{name === 'vessels' ? 'Replay' : 'Recordings'}</button>)}
+      </div>
+      <div className="header-status">
+        <div className="header-current" aria-label="Current recording"><span>Now loaded</span><strong>{recording?.name ?? 'No recording loaded'}</strong><small className="sr-only">{recording?.id ?? 'No dataset selected'}</small></div>
+        <div className="replay-time"><span>Recorded time · IST</span><time aria-label="Current replay time" dateTime={frame?.timestamp}>{frame ? istTime(frame.timestamp) : '—'}</time></div>
+        <div className={`connection ${recording ? status : 'empty'}`} role="status" aria-label="Replay connection"><span className="connection-dot" />{recording ? status : 'No recording'}</div>
+      </div>
     </header>
+    <div id="page-content" tabIndex={-1}>
     {switching && metadata && <p className="workspace-notice" role="status">Loading recording… Current replay continues until metadata is ready.</p>}
     {metadataError && metadata && <div className="notice" role="alert"><span>{metadataError} {recording ? 'Current replay was kept.' : 'Choose another recording or retry.'}</span>
       <button disabled={deleting} onClick={() => setMetadataAttempt(value => value + 1)}>Retry recording</button></div>}
@@ -98,40 +114,45 @@ export function App() {
       <button onClick={reconnect}>Reconnect</button><small>A new session starts paused at the beginning.</small>
     </div>}
     {error && status === 'connected' && <p className="notice" role="alert">{error}</p>}
-    <div className="workspace">
-      <div className="replay-stage">
-        {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording?.id ?? 'empty'} motionEnabled={!busy} motionEpoch={motionEpoch} searchFocus={searchFocus} /> :
-          <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
-        {!recording && <div className="empty-workspace" role="status"><strong>No recording loaded.</strong><span>Choose a recording to start replay.</span><button onClick={() => setTab('recordings')}>Choose recording</button></div>}
-        <Timeline key={recording?.id ?? 'empty'} frame={frame} metadata={activeMetadata} connected={!!recording && status === 'connected'} busy={busy} send={send} />
-        <footer><span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : recording ? 'Waiting for replay state' : 'No recording loaded'}</span>
-          <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span></footer>
-      </div>
-      <aside className="workspace-sidebar" aria-label="Workspace sidebar">
-        <div role="tablist" aria-label="Workspace tools" className="sidebar-tabs">
-          {(['vessels', 'recordings'] as const).map((name, index) => <button key={name} id={`${name}-tab`} role="tab"
-            aria-selected={tab === name} aria-controls={`${name}-tools`} tabIndex={tab === name ? 0 : -1}
-            onClick={() => setTab(name)} onKeyDown={event => {
-              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-              event.preventDefault(); const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index;
-              setTab(next === 0 ? 'vessels' : 'recordings');
-              (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next])?.focus();
-            }}>{name === 'vessels' ? 'Vessels' : 'Recordings'}</button>)}
+    <section id="vessels-tools" role="tabpanel" aria-labelledby="vessels-tab" hidden={tab !== 'vessels'} className="replay-view">
+      <div className="view-heading">
+        <div><p className="section-kicker">Your recording, in motion</p><h2>Vessel replay</h2>
+          <p className="recording-identity"><strong>{recording?.name ?? 'No recording loaded'}</strong><span>{recording ? recording.id === 'builtin' ? 'Built-in assignment · tracks.csv' : recording.id : 'Choose a recording to start replay'}</span></p>
         </div>
-        <div id="vessels-tools" role="tabpanel" aria-labelledby="vessels-tab" hidden={tab !== 'vessels'} className="sidebar-panel">
+        {activeMetadata && <dl className="recording-metrics" aria-label="Recording summary">
+          <div><dt>Vessels</dt><dd>{activeMetadata.vessel_count.toLocaleString('en-US')}</dd></div>
+          <div><dt>Recording duration</dt><dd>{recordingDuration(activeMetadata.recording_seconds)}</dd></div>
+          <div><dt>Observations</dt><dd>{activeMetadata.record_count.toLocaleString('en-US')}</dd></div>
+        </dl>}
+      </div>
+      <div className="workspace">
+        <div className="replay-stage">
+          <section className="map-card" aria-label="Recording map">
+            <div className="map-card-heading"><h3>Vessel positions</h3><span>{frame ? `${frame.vessels.length} currently observed` : 'Waiting for observations'}</span></div>
+            {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording?.id ?? 'empty'} motionEnabled={!busy} motionEpoch={motionEpoch} searchFocus={searchFocus} /> :
+              <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
+            {!recording && <div className="empty-workspace" role="status"><strong>No recording loaded.</strong><span>Choose a recording to start replay.</span><button onClick={() => setTab('recordings')}>Choose recording</button></div>}
+            <p className="map-card-note">Recorded GPS positions <span>Trails show the last 60 seconds</span></p>
+          </section>
+        </div>
+        <Timeline key={recording?.id ?? 'empty'} frame={frame} metadata={activeMetadata} connected={!!recording && status === 'connected'} busy={busy} send={send} />
+        <aside className="workspace-sidebar" aria-label="Vessel information">
           <VesselPanel vesselIds={activeMetadata?.vessel_ids ?? []} datasetId={recording?.id ?? 'empty'} onSelect={selectFromSearch} selected={selected} frame={frame} connected={status === 'connected'} />
           {activeMetadata && recording && <RecordingInfo key={`info:${recording.id}`} datasetId={recording.id} name={recording.name} metadata={activeMetadata} />}
-        </div>
-        <div ref={recordingsPanel} id="recordings-tools" role="tabpanel" aria-labelledby="recordings-tab" hidden={tab !== 'recordings'} className="sidebar-panel">
-          <div hidden={recordingDetailsOpen}>
-          <button className="builtin-replay" disabled={deleting || (recording?.id === 'builtin' && !switching)} onClick={() => chooseRecording(BUILTIN)}>Replay built-in assignment</button>
-          <UploadCsv onImported={() => setLibraryRevision(value => value + 1)} />
-          </div>
-          <DatasetLibrary onDetailsChange={setRecordingDetailsOpen} revision={libraryRevision} activeDatasetId={recording?.id ?? null} selecting={switching}
-            onPrepareDelete={prepareDelete} onDeleteFinished={finishDelete}
-            onReplay={item => chooseRecording({ id: item.dataset_id, name: item.original_filename })} />
-        </div>
-      </aside>
+        </aside>
+      </div>
+      <footer><span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : recording ? 'Waiting for replay state' : 'No recording loaded'}</span>
+        <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span></footer>
+    </section>
+    <section ref={recordingsPanel} id="recordings-tools" role="tabpanel" aria-labelledby="recordings-tab" hidden={tab !== 'recordings'} className="recordings-view">
+      <div className="view-heading recordings-heading"><div><p className="section-kicker">Keep your journeys together</p><h2>My Recordings</h2><p>Upload, explore and replay your vessel recordings.</p></div>
+        <button className="builtin-replay" disabled={deleting || (recording?.id === 'builtin' && !switching)} onClick={() => chooseRecording(BUILTIN)}>Replay built-in assignment</button>
+      </div>
+      <div hidden={recordingDetailsOpen}><UploadCsv onImported={() => setLibraryRevision(value => value + 1)} /></div>
+      <DatasetLibrary onDetailsChange={setRecordingDetailsOpen} revision={libraryRevision} activeDatasetId={recording?.id ?? null} selecting={switching}
+        onPrepareDelete={prepareDelete} onDeleteFinished={finishDelete}
+        onReplay={item => chooseRecording({ id: item.dataset_id, name: item.original_filename })} />
+    </section>
     </div>
   </main>;
 }

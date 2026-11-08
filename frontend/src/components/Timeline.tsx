@@ -37,6 +37,7 @@ export function Timeline({ frame, metadata, connected, busy, send }: Props) {
   }
 
   return <section className="timeline" aria-label="Playback controls">
+    <div className="timeline-card-heading"><h3>Playback</h3><span>Navigate the recording</span></div>
     <div className="timeline-actions">
       <div className="playback">
         <button className="play-button" disabled={!ready || busy || frame.playing || frame.second === last}

@@ -40,7 +40,7 @@ test('library loading, empty state, API failure and refresh recovery are explici
   expect(replay.connections()).toBe(1); expect(replay.errors).toEqual([]);
 });
 
-test('duplicate filenames use stable IDs; details and bounded preview stay inside the sidebar', async ({ page }) => {
+test('duplicate filenames use stable IDs; details use a spacious bounded preview table', async ({ page }) => {
   const replay = await setup(page); await list(page, [recording(), recording(B, null)]);
   await expect(page.locator('.recording-list > li')).toHaveCount(2);
   await expect(library(page)).toContainText('Unknown (E1 import)');
@@ -50,12 +50,13 @@ test('duplicate filenames use stable IDs; details and bounded preview stay insid
   const details = page.getByRole('region', { name: 'Recording details', exact: true });
   await expect(details).toContainText('10 Apr 2025, 17:30:00');
   await expect(details).toContainText('Naive timestamp timezone');
-  await expect(details).toContainText('13.123456');
-  await expect(page.locator('.workspace-sidebar .recording-details')).toBeVisible();
+  await expect(details.getByRole('table')).toContainText('13.123456');
+  await expect(details.getByRole('table').getByRole('row')).toHaveCount(21);
+  await expect(page.locator('.recordings-view .recording-details')).toBeVisible();
   await expect(page.getByText('Upload CSV', { exact: true })).not.toBeVisible();
   await expect(view(page, B)).toHaveCount(0);
   const preview = details.getByRole('region', { name: 'Observation preview' });
-  expect(await preview.evaluate(e => e.clientHeight <= 310 && e.scrollHeight > e.clientHeight && e.scrollWidth <= e.clientWidth)).toBe(true);
+  expect(await preview.evaluate(e => e.clientHeight <= 440 && e.scrollHeight > e.clientHeight)).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await preview.focus(); await expect(preview).toBeFocused();
@@ -84,6 +85,7 @@ test('preview failure preserves metadata and playback', async ({ page }) => {
   await page.route('**/api/datasets/**', route => route.request().url().includes('/preview')
     ? route.fulfill({ status: 500, json: { detail: 'Preview unavailable' } }) : route.fulfill({ json: recording() }));
   await view(page, A).click(); await expect(page.getByRole('region', { name: 'Recording details', exact: true })).toContainText('Preview could not be loaded');
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   await page.getByRole('button', { name: '▶ Play', exact: true }).click(); await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   expect(replay.connections()).toBe(1); expect(replay.errors).toEqual([]);
 });
@@ -98,6 +100,7 @@ test('upload refreshes the recording library while playback continues', async ({
   await recordingsTab(page).click(); await page.getByText('Upload CSV', { exact: true }).click();
   await page.getByLabel('CSV file').setInputFiles({ name: 'duplicate.csv', mimeType: 'text/csv', buffer: Buffer.from('test') });
   await page.getByRole('button', { name: 'Upload and store' }).click(); await expect(view(page, A)).toBeVisible();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled(); expect(replay.connections()).toBe(1);
 });
 
@@ -134,7 +137,7 @@ for (const singleSecond of [false, true]) {
       route.onClose(() => { closed = true; route.close(); });
     });
     await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
-    await expect(page.getByRole('tab', { name: 'Vessels', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Replay', exact: true })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByLabel('Current recording')).toContainText(A);
     const map = await page.locator('.leaflet-container').elementHandle();
     if (!singleSecond) await page.getByRole('button', { name: '▶ Play', exact: true }).click();
@@ -143,10 +146,12 @@ for (const singleSecond of [false, true]) {
     await expect(confirmation(page)).not.toBeVisible(); expect(deletes).toBe(1);
     await expect(page.getByLabel('Current recording')).toContainText('No recording loaded');
     await expect(page.locator('.vessel-marker, path.vessel-trail')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Replay', exact: true }).click();
     await expect(page.getByRole('slider', { name: 'Replay position' })).toBeDisabled();
     await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeDisabled();
     expect(replay.connections()).toBe(1);
     expect(await map!.evaluate(e => e === document.querySelector('.leaflet-container'))).toBe(true);
+    await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
     await page.getByRole('button', { name: 'Replay built-in assignment' }).click();
     await expect(page.getByLabel('Current recording')).toContainText('Built-in assignment');
     await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled(); expect(replay.connections()).toBe(2);

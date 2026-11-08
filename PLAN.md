@@ -110,12 +110,18 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [x] Close this tab's replay before active deletion, retain an explicit empty state and preserve other-client protection.
 - [x] Verify backend/browser/build, isolated real deletion, main data preservation and independent reviews.
 
+## Coastal Editorial complete frontend redesign
+- [x] Replace dark styling with light design tokens, licensed local fonts and readable controls.
+- [x] Separate Replay/Recordings, restore spacious metadata/preview table and responsive map/playback composition.
+- [x] Inspect four viewport screenshots and complete a deliberate critique/refinement pass.
+- [x] Fix hidden-map bounds; verify 216 backend/72 browser tests, production build, Docker, real import/deletion and main data preservation with independent reviews.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2, I3 and the frontend redesign are complete with independent reviews appropriate to each scope.
+**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2, I3 and both frontend redesign stages are complete with independent reviews appropriate to each scope.
 Stop after the frontend redesign, before further E5 work or Phase 7 final verification,
 screenshot, repository cleanup and submission preparation.

@@ -2,11 +2,6 @@ import { useEffect, useState } from 'react';
 import { getDatasetJson, istDateTime, parseRecording, type Recording } from '../datasets';
 import type { Metadata } from '../types';
 
-function duration(seconds: number) {
-  const hours = Math.floor(seconds / 3600), minutes = Math.floor(seconds % 3600 / 60), remainder = seconds % 60;
-  return [hours && `${hours}h`, minutes && `${minutes}m`, (remainder || !hours && !minutes) && `${remainder}s`].filter(Boolean).join(' ');
-}
-
 export function RecordingInfo({ datasetId, name, metadata }: {
   datasetId: string; name: string; metadata: Metadata;
 }) {
@@ -28,8 +23,11 @@ export function RecordingInfo({ datasetId, name, metadata }: {
     return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
   }, [builtin, datasetId, attempt]);
   return <details className="recording-info" aria-label="Recording information">
-    <summary>{builtin ? 'Built-in assignment' : 'Uploaded recording'} · {metadata.vessel_count.toLocaleString('en-US')} vessels · {duration(metadata.recording_seconds)} · {metadata.record_count.toLocaleString('en-US')} observations</summary>
+    <summary>About this recording</summary>
     <dl className="recording-summary">
+      <div><dt>Recording type</dt><dd>{builtin ? 'Built-in assignment' : 'Uploaded recording'}</dd></div>
+      <div><dt>Vessels</dt><dd>{metadata.vessel_count.toLocaleString('en-US')}</dd></div>
+      <div><dt>Accepted observations</dt><dd>{metadata.record_count.toLocaleString('en-US')}</dd></div>
       <div><dt>Filename</dt><dd>{builtin ? 'tracks.csv' : name}</dd></div>
       <div><dt>Recorded duration</dt><dd>{metadata.recording_seconds.toLocaleString('en-US')} seconds</dd></div>
       <div><dt>Recording start · IST (Asia/Kolkata)</dt><dd><time dateTime={metadata.start}>{istDateTime(metadata.start)}</time></dd></div>

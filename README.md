@@ -2,7 +2,7 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: frontend redesign reviewed** — interactive Leaflet map, directional markers, gap-split trails,
+**Status: Coastal Editorial redesign reviewed** — interactive Leaflet map, directional markers, gap-split trails,
 server-controlled timeline, Play/Pause/Reset, 1×/2×/5×/10× speeds and current vessel
 details. Final verification/submission preparation remain for Phase 7. See the [plan](PLAN.md).
 
@@ -43,7 +43,8 @@ time/bounds; return to the built-in assignment through the Recordings tab. Uploa
 keeps the current replay. Uploads support up to **50 MiB / 1,000,000 source rows**
 with disk-backed normalization. Deleting a loaded upload closes this tab’s replay and leaves an empty workspace;
 other active clients block deletion. Run one backend worker. Upload feedback distinguishes transfer
-from processing; expand recording information in the Vessels tab for counts and times.
+from processing; expand About this recording in Replay for counts and times.
+Replay and Recordings have separate responsive views with a readable observation-preview table.
 Limits, recovery and APIs: [recordings](docs/DATASETS.md).
 
 ## Data problems found

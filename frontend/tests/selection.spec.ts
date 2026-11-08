@@ -23,7 +23,7 @@ for (const speed of [0, 1, 5, 10]) {
       vessels: [vessel('T007', 13.082801, 80.358893, 90), initial.vessels[1]] });
     await expect(marker.locator('.vessel-glyph')).toHaveCSS('transform', 'matrix(0, 1, -1, 0, 0, 0)');
     await page.mouse.up();
-    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading')).toHaveText('T007');
+    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading', { level: 2 })).toHaveText('T007');
     await expect(marker).toHaveClass(/is-selected/);
     expect(await oldMarker!.evaluate(e => e === document.querySelector('[title="Vessel T007"]'))).toBe(true);
     server.send({ ...frame, second: 2, vessels: [vessel('T007', 13.0829, 80.359, 180), initial.vessels[1]] });
@@ -39,10 +39,19 @@ test('nearby markers, trails, zoom, pan and selection after seeks/gaps stay usab
   const server = await setup(page, { frame: { ...initial, vessels } });
   const a = page.getByTitle('Vessel NEAR-A'), b = page.getByTitle('Vessel NEAR-B');
   await a.scrollIntoViewIfNeeded();
+  // At the narrower map's fitted zoom the exposed edge is only one pixel;
+  // zoom once so a real integer-coordinate pointer can reach it reliably.
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await settledMapView(page);
   const ab = (await a.boundingBox())!, bb = (await b.boundingBox())!;
   expect(Math.abs(ab.x - bb.x)).toBeLessThan(32); // Overlapping targets at initial zoom.
   // The visible uncovered edge selects A; selection raises it above the other marker.
-  await page.mouse.click(ab.x + 2, ab.y + 16);
+  const exposedWidth = bb.x - ab.x;
+  expect(exposedWidth).toBeGreaterThan(0);
+  const point = { x: Math.ceil(ab.x) + 1, y: Math.round(ab.y + 16) };
+  expect(point.x).toBeLessThan(bb.x);
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.vessel-marker')?.getAttribute('title'), point)).toBe('Vessel NEAR-A');
+  await page.mouse.click(point.x, point.y);
   await expect(a).toHaveClass(/is-selected/);
   await page.getByRole('button', { name: 'Zoom in' }).click({ clickCount: 3, delay: 350 });
   await settledMapView(page);
@@ -61,7 +70,7 @@ test('nearby markers, trails, zoom, pan and selection after seeks/gaps stay usab
     await expect(slider).toBeEnabled();
   }
   await b.click();
-  await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading')).toHaveText('NEAR-B');
+  await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading', { level: 2 })).toHaveText('NEAR-B');
   server.send({ ...initial, second: 50, vessels: [vessels[0]] });
   await expect(page.getByText('No observation at this time.', { exact: true })).toBeVisible();
   server.send({ ...initial, vessels });
@@ -96,7 +105,7 @@ test('100-vessel 10× frames retain marker identities and first-click selection'
     await expect(marker.locator('.vessel-glyph')).toHaveAttribute('style', new RegExp(`rotate\\(${second * 10}deg\\)`));
     await page.mouse.up();
     await expect(marker).toHaveClass(/is-selected/);
-    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading')).toHaveText(id);
+    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading', { level: 2 })).toHaveText(id);
     expect(await originals.get(id)!.evaluate(e => e === document.querySelector(`[title="${e.getAttribute('title')}"]`))).toBe(true);
   }
   expect(server.errors).toEqual([]);

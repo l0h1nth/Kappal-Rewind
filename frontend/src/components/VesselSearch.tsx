@@ -30,7 +30,7 @@ export function VesselSearch({ vesselIds, frame, selected, onSelect }: {
   }
   return <section ref={root} className="vessel-search" aria-label="Vessel search">
     <label htmlFor="vessel-search">Search vessel ID</label>
-    <input id="vessel-search" type="text" role="combobox" aria-autocomplete="list"
+    <input id="vessel-search" type="text" name="vessel-search" spellCheck={false} role="combobox" aria-autocomplete="list"
       aria-expanded={open} aria-controls="matching-vessels"
       aria-activedescendant={open && active >= 0 ? `vessel-option-${active}` : undefined}
       placeholder="Find a vessel…" autoComplete="off" value={search}

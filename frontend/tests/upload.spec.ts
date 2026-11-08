@@ -27,9 +27,11 @@ test('upload progress and validation leave the replay session unchanged', async 
   await expect(page.locator('.upload-section')).toContainText('other.csv');
   await page.getByRole('button', { name: 'Upload and store' }).click();
   await expect(page.getByRole('button', { name: 'Import in progress…' })).toBeDisabled();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   await page.getByRole('button', { name: '▶ Play', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
   release();
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await expect(page.locator('.upload-result')).toContainText('2 accepted rows / 3 source rows');
   await expect(page.locator('.upload-result')).toContainText('1 duplicate rows discarded');
   await expect(page.locator('.upload-result')).toContainText('timezone: UTC');
@@ -69,6 +71,7 @@ test('upload errors are local and selecting another file clears them', async ({ 
   await upload.click();
   await expect(alert).toBeVisible();
   await expect(upload).toBeEnabled();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
   expect(replay.connections()).toBe(1);
   expect(replay.errors).toEqual([]);
@@ -88,6 +91,7 @@ test('upload limits come from backend settings and failure has explicit recovery
   await expect(page.locator('.upload-help')).toContainText('4 bytes / 2 rows');
   await page.getByRole('button', { name: 'Upload and store' }).click();
   await expect(page.locator('.upload-section').getByRole('alert')).toContainText('4 byte');
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
 });
 

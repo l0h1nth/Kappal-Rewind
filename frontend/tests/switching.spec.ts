@@ -46,7 +46,7 @@ async function prepare(page: Page) {
   await page.getByRole('tab', { name: 'Recordings', exact: true }).click();
   await page.getByRole('button', { name: 'Refresh recordings' }).click();
   await expect(replay(page, A)).toBeVisible();
-  await page.getByRole('tab', { name: 'Vessels', exact: true }).click();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
   return { builtin, opened, sockets };
 }
 async function choose(page: Page, id: string) {
@@ -82,7 +82,7 @@ test('playing builtin → London → Tokyo → builtin resets state and refits t
     const target = page.getByTitle(id === A ? 'Vessel LONDON' : 'Vessel TOKYO', { exact: true });
     await target.click();
     await expect(target).toHaveClass(/is-selected/);
-    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading'))
+    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading', { level: 2 }))
       .toHaveText(id === A ? 'LONDON' : 'TOKYO');
   }
   await expect(page.locator('.vessel-marker')).toHaveCount(2);
@@ -203,7 +203,7 @@ test('vessel search replaces metadata IDs and clears the filter after switching'
 test('current recording information shows exact metadata, timezone and optional validation counts', async ({ page }) => {
   await prepare(page);
   const info = page.getByLabel('Recording information', { exact: true });
-  await expect(info.locator('summary')).toContainText('Built-in assignment · 20 vessels · 30m · 35,780 observations');
+  await expect(info.locator('summary')).toContainText('About this recording');
   await info.locator('summary').click();
   await expect(info).toContainText('tracks.csv');
   await expect(info).toContainText('Recording start · IST (Asia/Kolkata)');
@@ -213,7 +213,7 @@ test('current recording information shows exact metadata, timezone and optional 
     validation: { ...record(A).validation, source_row_count: 7, naive_timestamp_rows: 7,
       discarded_row_count: 2, exact_duplicate_rows: 2, missing_observation_seconds: 0 } } }));
   await choose(page, A); await loaded(page, A);
-  await expect(info.locator('summary')).toHaveText('Uploaded recording · 1 vessels · 5s · 5 observations');
+  await expect(info.locator('summary')).toHaveText('About this recording');
   await info.locator('summary').click();
   await expect(info).toContainText('a.csv');
   await expect(info.locator('time').first()).toHaveText('01 Jan 2024, 05:30:00');
@@ -236,4 +236,22 @@ test('late recording information cannot replace another recording and metadata f
   await page.getByRole('button', { name: 'Retry recording information' }).click();
   await expect(info).toContainText('Missing vessel-seconds');
   await expect(play(page)).toBeEnabled();
+});
+
+
+test('uploaded metadata completing in Recordings waits for a visible map before fitting', async ({ page }) => {
+  const server = await prepare(page);
+  let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`**/api/replay/${A}/meta`, async route => { await held; await route.fulfill({ json: meta(A) }); });
+  await choose(page, A);
+  await page.getByRole('tab', { name: 'Recordings', exact: true }).click(); release();
+  await expect(page.getByLabel('Current recording')).toContainText(A);
+  await expect(page.locator('.leaflet-container')).not.toBeVisible();
+  await page.getByRole('tab', { name: 'Replay', exact: true }).click();
+  await expect.poll(async () => {
+    const map = (await page.locator('.leaflet-container').boundingBox())!;
+    const boat = (await page.getByTitle('Vessel LONDON').boundingBox())!;
+    return boat.x > map.x && boat.x + boat.width < map.x + map.width && boat.y > map.y && boat.y + boat.height < map.y + map.height;
+  }).toBe(true);
+  expect(server.builtin.errors).toEqual([]);
 });

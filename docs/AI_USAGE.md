@@ -314,3 +314,9 @@ this file records contributions and reviewer scope.
   checks and actual main desktop/mobile QA with real OSM tiles.
   No real user recording was deleted, no human verification is claimed, and final
   assignment screenshot/submission work remains deferred.
+
+## Coastal Editorial redesign — 8 Nov 2026
+
+- Codex inspected and installed original upstream skills: [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), [frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design), and Vercel [web-design-guidelines/react-best-practices](https://github.com/vercel-labs/agent-skills). Used their design, accessibility and stable-rendering guidance; UIUX search returned generic landing-page suggestions, so the user's Coastal brief governed composition. No remote installation script or component framework was added.
+- [AIS demo](https://github.com/HoangSonDeveloper/ais-demo) screenshots informed warm surfaces, hierarchy and spacing only; no source/logo/assets copied. Google Fonts supplied licensed Newsreader/Source Sans 3 subsets with OFL notices. Codex used build-journal/replay-verification, implemented React/CSS/tests, inspected four real viewport captures and made an intentional critique/refinement pass.
+- Independent read-only replay/release reviewers identified hidden-map fitting, boundary contrast and duration-label issues; Codex fixed them. Actual checks: 216 backend/72 Firefox tests, typecheck/build, isolated real import/delete/protection flows, main Docker/read-only replay/data-preservation checks and real OSM screenshots. Fixture tests and isolated interaction checks mock tiles; visual captures do not. No human verification, performance gain, final submission work, commit or push is claimed.

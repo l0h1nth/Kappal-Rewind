@@ -8,8 +8,11 @@ export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, 
 }) {
   const vessel = frame?.vessels.find(vessel => vessel.id === selected);
   return <aside className="vessel-panel" aria-label="Vessel details">
+    <section className="vessel-search-card">
     <VesselSearch key={datasetId} vesselIds={vesselIds} frame={frame} selected={selected} onSelect={onSelect} />
-    <p className="eyebrow">SELECTED VESSEL</p>
+    </section>
+    <section className="selected-vessel-card">
+    <p className="eyebrow">Selected vessel</p>
     <h2>{selected ?? 'Vessel details'}</h2>
     {!selected ? <p className="panel-note">Search by vessel ID or select a vessel on the map.</p> :
       !connected || !frame ? <p className="panel-note">Current observation unavailable. Waiting for the replay connection.</p> :
@@ -24,6 +27,6 @@ export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, 
             <dd><time dateTime={frame.timestamp}>{istTime(frame.timestamp)}</time></dd></div>
         </dl>
       </>}
-    {selected && <p className="panel-help">Selection stays with this ID during playback. Values appear only when an observation exists.</p>}
+    </section>
   </aside>;
 }

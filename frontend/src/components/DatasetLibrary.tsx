@@ -1,3 +1,4 @@
+import { recordingDuration } from '../format';
 import { useEffect, useRef, useState } from 'react';
 import { getDatasetJson, istDateTime, parsePreview, parseRecording, validationLabels, type PreviewRow, type Recording } from '../datasets';
 
@@ -19,29 +20,31 @@ function RecordingDetails({ id }: { id: string }) {
     return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
   }, [id]);
   return <section className="recording-details" aria-label="Recording details">
-    <h3>Read-only recording details</h3>
+    <p className="detail-caption">Read-only recording details</p>
     {metadataError ? <p role="alert">{metadataError}</p> : !recording ? <p role="status">Loading recording details…</p> : <>
-      <h4>{recording.original_filename}</h4><p className="recording-id">{recording.dataset_id}</p>
+      <h3 className="detail-filename">{recording.original_filename}</h3><p className="recording-id">{recording.dataset_id}</p>
       <dl className="recording-summary">
         <div><dt>Imported · IST</dt><dd>{recording.imported_at ? istDateTime(recording.imported_at) : 'Unknown (E1 import)'}</dd></div>
         <div><dt>Recording start · IST</dt><dd>{istDateTime(recording.start)}</dd></div>
         <div><dt>Recording end · IST</dt><dd>{istDateTime(recording.end)}</dd></div>
-        <div><dt>Vessels / recorded seconds</dt><dd>{recording.vessel_count} / {recording.duration_seconds}</dd></div>
-        <div><dt>Accepted observations</dt><dd>{recording.accepted_row_count}</dd></div>
+        <div><dt>Vessels / duration</dt><dd>{recording.vessel_count.toLocaleString('en-US')} / {recordingDuration(recording.duration_seconds)}</dd></div>
+        <div><dt>Accepted observations</dt><dd>{recording.accepted_row_count.toLocaleString('en-US')}</dd></div>
         <div><dt>Naive timestamp timezone</dt><dd>{recording.validation.naive_timezone}</dd></div>
         {Object.entries(validationLabels).map(([key, label]) => <div key={key}><dt>{label}</dt>
-          <dd>{recording.validation[key as keyof typeof validationLabels]}</dd></div>)}
+          <dd>{recording.validation[key as keyof typeof validationLabels].toLocaleString('en-US')}</dd></div>)}
       </dl>
     </>}
     <h4>Normalized observations · first 20 rows</h4>
     {previewError ? <p role="alert">{previewError}</p> : rows === null ? <p role="status">Loading observation preview…</p> :
       <div className="preview-scroll" role="region" aria-label="Observation preview" tabIndex={0}>
-        <p>Ordered by timestamp, then vessel ID · IST</p>
-        <ol className="preview-rows">{rows.map(row => <li key={`${row.timestamp}:${row.track_id}`}>
-          <strong>{row.track_id}</strong><time dateTime={row.timestamp}>{istDateTime(row.timestamp)}</time>
-          <dl><div><dt>Latitude / longitude</dt><dd>{row.lat} / {row.lon}</dd></div>
-            <div><dt>Speed / heading</dt><dd>{row.speed_knots} kn / {row.heading}°</dd></div></dl>
-        </li>)}</ol>
+        <table>
+          <caption>Ordered by timestamp, then vessel ID. Times shown in IST.</caption>
+          <thead><tr>{['Vessel ID', 'Timestamp · IST', 'Latitude', 'Longitude', 'Speed · knots', 'Heading · degrees'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
+          <tbody>{rows.map(row => <tr key={`${row.timestamp}:${row.track_id}`}>
+            <td>{row.track_id}</td><td><time dateTime={row.timestamp}>{istDateTime(row.timestamp)}</time></td>
+            <td>{row.lat}</td><td>{row.lon}</td><td>{row.speed_knots}</td><td>{row.heading}</td>
+          </tr>)}</tbody>
+        </table>
         {!rows.length && <p>No observations returned.</p>}
       </div>}
 
@@ -140,7 +143,7 @@ export function DatasetLibrary({ revision, activeDatasetId, selecting = false, o
   // Bound rendered library rows; refine search to reach any recording by ID/name.
   const visible = matches.slice(0, 50);
   return <section className="dataset-library" aria-label="My Recordings">
-    <div className="library-header"><h2>My Recordings</h2><button ref={refreshButton} onClick={() => setRefresh(value => value + 1)}>Refresh recordings</button></div>
+    <div className="library-header"><h3>Saved recordings</h3><button ref={refreshButton} onClick={() => setRefresh(value => value + 1)}>Refresh recordings</button></div>
     {deleteMessage && !deleteTarget && <p role={deleteMessage.error ? 'alert' : 'status'}>{deleteMessage.text}</p>}
     <dialog ref={dialog} className="delete-confirmation" aria-labelledby="delete-title" aria-describedby="delete-description"
       onCancel={event => { event.preventDefault(); if (!deleteRequest.current) { setDeleteTarget(null); setDeleteMessage(null); } }}>
@@ -157,7 +160,7 @@ export function DatasetLibrary({ revision, activeDatasetId, selecting = false, o
       <h2 ref={heading} tabIndex={-1} className="details-heading">Recording information</h2>
       <RecordingDetails key={`${selected}:${revision}`} id={selected} />
     </> : <>
-      <label className="library-filter">Search recordings<input type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Filename or dataset ID" /></label>
+      <label className="library-filter">Search recordings<input type="search" autoComplete="off" name="recording-search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Search by filename or dataset ID…" /></label>
       {loading && !recordings.length ? <p role="status">Loading recordings…</p> : error ? <p role="alert">{error}</p> : !recordings.length ?
         <p>No uploaded recordings yet. Upload a CSV to add one.</p> : <>
         <p className="library-count">{matches.length} recordings{matches.length > visible.length ? ` · showing first ${visible.length}; refine search` : ''}</p>
@@ -165,7 +168,9 @@ export function DatasetLibrary({ revision, activeDatasetId, selecting = false, o
         <ul className="recording-list">{visible.map(recording => <li key={recording.dataset_id}>
           <div className="recording-row-title"><h3>{recording.original_filename}</h3>{recording.dataset_id === activeDatasetId && <span className="current-badge">Current</span>}</div>
           <p className="recording-id" title={recording.dataset_id}>{recording.dataset_id}</p>
-          <p>{recording.vessel_count} vessels · {recording.duration_seconds}s · {recording.accepted_row_count.toLocaleString('en-US')} observations</p>
+          <dl className="recording-stats"><div><dt>Vessels</dt><dd>{recording.vessel_count.toLocaleString('en-US')}</dd></div>
+            <div><dt>Duration</dt><dd>{recordingDuration(recording.duration_seconds)}</dd></div>
+            <div><dt>Observations</dt><dd>{recording.accepted_row_count.toLocaleString('en-US')}</dd></div></dl>
           <p className="imported-at">Imported · IST: {recording.imported_at ? istDateTime(recording.imported_at) : 'Unknown (E1 import)'}</p>
           <div className="recording-actions">
             <button className="recording-replay" disabled={deletePending || (recording.dataset_id === activeDatasetId && !selecting)}

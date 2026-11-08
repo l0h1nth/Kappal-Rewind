@@ -352,3 +352,9 @@ Study [combobox keyboard semantics](https://www.w3.org/WAI/ARIA/apg/patterns/com
 and [WebSocket closing](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close).
 Interview prompt: why must closing a recording and returning to the initial dataset
 be different state transitions?
+
+## Coastal Editorial layout
+
+- CSS tokens centralize color, spacing and type. Grid gives the map roughly two thirds of desktop space; Flexbox wraps controls. Smaller screens stack map, playback and information instead of shrinking text.
+- Hidden mounted views retain React/map identity and import/session state. Leaflet must wait for positive container dimensions before fitting recording bounds; ordinary navigation must preserve user pan/zoom.
+- Accessible autocomplete keeps bounded options and keyboard focus; real table headers/caption explain normalized preview values. Visible focus rings and contrasting input boundaries matter alongside readable text. Local OFL fonts avoid runtime font services; system fallbacks remain available.
