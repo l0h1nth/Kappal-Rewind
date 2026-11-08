@@ -210,6 +210,9 @@ cancelling an in-flight switch back to the current recording.
 - DatasetLibrary confirms the filename/permanence, serializes confirmation clicks,
   handles conflicts without changing replay, and refreshes while keeping another
   recording's preview mounted. A timeout means the result is uncertain: refresh.
+  Finishing playback does not close its socket. The delete confirmation now offers
+  an explicit built-in switch and waits for a valid built-in frame before enabling
+  deletion; metadata success or an open socket alone does not establish readiness.
 
 Interview questions: Why do paused sockets block deletion? What breaks if the
 reference is incremented after opening Parquet? Why must HTTP cancellation not

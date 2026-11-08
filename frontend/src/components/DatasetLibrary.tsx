@@ -48,8 +48,9 @@ function RecordingDetails({ id }: { id: string }) {
   </section>;
 }
 
-export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selecting = false, onReplay }: {
+export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selecting = false, onReplay, builtinReplayReady, builtinReplayFailed, switchError, onSwitchToBuiltin }: {
   revision: number; activeDatasetId?: string; selecting?: boolean; onReplay?: (recording: Recording) => void;
+  builtinReplayReady: boolean; builtinReplayFailed: boolean; switchError: string | null; onSwitchToBuiltin: () => void;
 }) {
   const [refresh, setRefresh] = useState(0);
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -58,6 +59,7 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
   const [selected, setSelected] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Recording | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+  const [awaitingBuiltin, setAwaitingBuiltin] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState<{ error: boolean; text: string } | null>(null);
   const deleteRequest = useRef<AbortController | null>(null);
   const mounted = useRef(false);
@@ -66,8 +68,10 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
     return () => { mounted.current = false; deleteRequest.current?.abort(); };
   }, []);
 
+  const deleteBlocked = selecting || deleteTarget?.dataset_id === activeDatasetId || (awaitingBuiltin && !builtinReplayReady);
+
   async function confirmDelete() {
-    if (!deleteTarget || deleteRequest.current) return;
+    if (!deleteTarget || deleteRequest.current || deleteBlocked) return;
     const target = deleteTarget;
     const controller = new AbortController();
     deleteRequest.current = controller;
@@ -84,10 +88,11 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
         setRecordings(previous => previous.filter(item => item.dataset_id !== target.dataset_id));
         setSelected(previous => previous === target.dataset_id ? null : previous);
         setDeleteTarget(null);
+        setAwaitingBuiltin(false);
         setRefresh(value => value + 1);
       }
       if (!response.ok) throw new Error(response.status === 409
-        ? 'This recording is currently being replayed or deleted. Close its replay or explicitly switch to the built-in assignment, then retry.'
+        ? 'This recording is still open in another tab or its previous connection is closing. Close or switch away in every tab, then retry. A deletion may also already be in progress.'
         : typeof body?.detail === 'string' ? body.detail : 'Recording could not be deleted. Refresh and retry.');
       if (!removed) throw new Error('Deletion was not confirmed. Refresh the library before retrying.');
       setDeleteMessage({ error: false, text: `Deleted ${target.original_filename} (${target.dataset_id.slice(0, 8)}).` });
@@ -125,9 +130,17 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
     {deleteMessage && <p role={deleteMessage.error ? 'alert' : 'status'}>{deleteMessage.text}</p>}
     {deleteTarget && <section className="delete-confirmation" role="alertdialog" aria-label="Delete recording?" aria-describedby="delete-description">
       <h3>Delete recording?</h3><p id="delete-description">Permanently delete <strong>{deleteTarget.original_filename}</strong> ({deleteTarget.dataset_id})? This removes its observations and metadata and cannot be undone.</p>
-      {deleteTarget.dataset_id === activeDatasetId && <p>This recording is loaded here. Explicitly switch to the built-in assignment before retrying deletion.</p>}
-      <button disabled={deletePending} onClick={() => { setDeleteTarget(null); setDeleteMessage(null); }}>Cancel</button>
-      <button className="delete-action" disabled={deletePending} onClick={confirmDelete}>{deletePending ? 'Deleting…' : 'Permanently delete'}</button>
+      {deleteTarget.dataset_id === activeDatasetId && <p>This recording is loaded here. Switch to the built-in assignment below, then confirm permanent deletion.</p>}
+      {(deleteTarget.dataset_id === activeDatasetId || (awaitingBuiltin && !builtinReplayReady)) && <>
+        <button disabled={deletePending || selecting || (activeDatasetId === 'builtin' && !builtinReplayReady && !builtinReplayFailed)}
+          onClick={() => { setAwaitingBuiltin(true); setDeleteMessage(null); onSwitchToBuiltin(); }}>
+          {builtinReplayFailed ? 'Reconnect built-in assignment' : selecting || (activeDatasetId === 'builtin' && !builtinReplayReady) ? 'Switching to built-in…' : 'Switch to built-in assignment'}
+        </button>
+        {awaitingBuiltin && (switchError || builtinReplayFailed) && <p role="alert">{switchError ?? 'Built-in replay disconnected. Reconnect to continue.'} Deletion has not been sent. Retry switching or cancel.</p>}
+      </>}
+      {awaitingBuiltin && builtinReplayReady && <p role="status">Built-in assignment loaded. Confirm permanent deletion below.</p>}
+      <button disabled={deletePending} onClick={() => { setDeleteTarget(null); setAwaitingBuiltin(false); setDeleteMessage(null); }}>Cancel</button>
+      <button className="delete-action" disabled={deletePending || deleteBlocked} onClick={confirmDelete}>{deletePending ? 'Deleting…' : 'Permanently delete'}</button>
     </section>}
     {loading && !recordings.length ? <p role="status">Loading recordings…</p> : error ? <p role="alert">{error}</p> : !recordings.length ?
       <p>No uploaded recordings yet. Upload a CSV to add one.</p> : <ul className="recording-list">
@@ -142,7 +155,7 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
             onClick={() => onReplay(recording)}>{recording.dataset_id === activeDatasetId ? 'Currently loaded' : 'Replay'}</button>}
           <button className="delete-action" disabled={deletePending}
             aria-label={`Delete ${recording.original_filename} (${recording.dataset_id.slice(0, 8)})`}
-            onClick={() => { setDeleteTarget(recording); setDeleteMessage(null); }}>Delete</button>
+            onClick={() => { setDeleteTarget(recording); setAwaitingBuiltin(false); setDeleteMessage(null); }}>Delete</button>
         </li>)}
       </ul>}
     {selected && !error && <>

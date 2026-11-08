@@ -172,35 +172,61 @@ test('delete requires named permanent confirmation, prevents duplicate submits a
   expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
 });
 
-test('409 keeps the loaded recording playing until the user explicitly switches before retrying delete', async ({ page }) => {
-  const server = await setup(page);
-  const { metadata, initial } = await import('./fixtures');
-  let removed = false;
-  await page.route('**/api/datasets', route => route.fulfill({ json: removed ? [] : [recording()] }));
-  await refresh(page).click();
-  await page.route(`**/api/replay/${A}/meta`, route => route.fulfill({ json: { ...metadata, dataset_id: A } }));
-  await page.routeWebSocket(`**/ws/replay?dataset_id=${A}`, route => {
-    route.send(JSON.stringify({ ...initial, dataset_id: A }));
-    route.onMessage(() => route.send(JSON.stringify({ ...initial, dataset_id: A, playing: true })));
+for (const singleSecond of [false, true]) {
+  test(`loaded ${singleSecond ? 'finished single-second' : 'playing'} recording must explicitly switch to builtin before deletion`, async ({ page }) => {
+    const server = await setup(page);
+    const { metadata, initial } = await import('./fixtures');
+    let removed = false, deletes = 0;
+    await page.route('**/api/datasets', route => route.fulfill({ json: removed ? [] : [recording()] }));
+    await refresh(page).click();
+    await page.route(`**/api/replay/${A}/meta`, route => route.fulfill({ json: { ...metadata, dataset_id: A,
+      ...(singleSecond ? { end: metadata.start, recording_seconds: 1 } : {}) } }));
+    await page.routeWebSocket(`**/ws/replay?dataset_id=${A}`, route => {
+      const state = { ...initial, dataset_id: A, duration_seconds: singleSecond ? 1 : 1800 };
+      route.send(JSON.stringify(state));
+      route.onMessage(() => route.send(JSON.stringify({ ...state, playing: true })));
+    });
+    await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
+    await expect(page.getByLabel('Current recording')).toContainText(A);
+    if (!singleSecond) await page.getByRole('button', { name: '▶ Play', exact: true }).click();
+    await page.route(`**/api/datasets/${A}`, route => {
+      deletes++; removed = true; return route.fulfill({ json: { dataset_id: A, deleted: true } });
+    });
+    await remove(page, A).click();
+    await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeDisabled();
+    expect(deletes).toBe(0);
+    let sendBuiltin = () => {};
+    await page.routeWebSocket('**/ws/replay', route => { sendBuiltin = () => route.send(JSON.stringify(initial)); });
+    // Slow preflight must keep Delete disabled and the original replay intact.
+    let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+    await page.route('**/api/meta', async route => { await held; await route.fulfill({ json: metadata }); });
+    await confirmation(page).getByRole('button', { name: 'Switch to built-in assignment' }).click();
+    await expect(confirmation(page)).toContainText('Switching');
+    await expect(page.getByLabel('Current recording')).toContainText(A);
+    await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeDisabled();
+    release();
+    await expect(page.getByLabel('Current recording')).toContainText('Built-in assignment');
+    await expect(page.getByRole('status', { name: 'Replay connection' })).toHaveText('connected');
+    await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeDisabled();
+    sendBuiltin();
+    await expect(confirmation(page)).toContainText('Built-in assignment loaded');
+    await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeEnabled();
+    await confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true }).click();
+    await expect(remove(page, A)).toHaveCount(0);
+    expect(deletes).toBe(1); expect(server.errors).toEqual([]);
   });
-  await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
-  await expect(page.getByLabel('Current recording')).toContainText(A);
-  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
-  await page.route(`**/api/datasets/${A}`, route => route.fulfill({ status: 409, json: { detail: 'busy' } }));
+}
+
+test('another tab conflict remains visible and does not silently switch unrelated playback', async ({ page }) => {
+  const server = await setup(page); await list(page);
+  let deletes = 0;
+  await page.route(`**/api/datasets/${A}`, route => { deletes++; return route.fulfill({ status: 409, json: { detail: 'busy' } }); });
   await remove(page, A).click();
-  await expect(confirmation(page)).toContainText('loaded here');
   await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
-  await expect(library(page).getByRole('alert')).toContainText('explicitly switch');
-  await expect(page.getByLabel('Current recording')).toContainText(A);
-  await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Replay built-in assignment' }).click();
+  await expect(library(page).getByRole('alert')).toContainText('another tab');
   await expect(page.getByLabel('Current recording')).toContainText('Built-in assignment');
-  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
-  await page.route(`**/api/datasets/${A}`, route => { removed = true; return route.fulfill({ json: { dataset_id: A, deleted: true } }); });
-  await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
-  await expect(remove(page, A)).toHaveCount(0);
-  await expect(library(page)).toContainText('No uploaded recordings yet');
-  expect(server.errors).toEqual([]);
+  await expect(remove(page, A)).toBeVisible();
+  expect(deletes).toBe(1); expect(server.connections()).toBe(1);
 });
 
 for (const partial of [false, true]) {
@@ -224,3 +250,34 @@ for (const partial of [false, true]) {
     expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
   });
 }
+
+
+test('failed builtin switch can retry metadata and reconnect locally without sending deletion early', async ({ page }) => {
+  const server = await setup(page);
+  const { metadata, initial } = await import('./fixtures');
+  await list(page);
+  await page.route(`**/api/replay/${A}/meta`, route => route.fulfill({ json: { ...metadata, dataset_id: A } }));
+  await page.routeWebSocket(`**/ws/replay?dataset_id=${A}`, route => route.send(JSON.stringify({ ...initial, dataset_id: A })));
+  await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
+  await expect(page.getByLabel('Current recording')).toContainText(A);
+  let deletes = 0;
+  await page.route(`**/api/datasets/${A}`, route => { deletes++; return route.fulfill({ json: { dataset_id: A, deleted: true } }); });
+  await remove(page, A).click();
+  await page.route('**/api/meta', route => route.fulfill({ status: 503, json: { detail: 'metadata offline' } }));
+  await confirmation(page).getByRole('button', { name: 'Switch to built-in assignment' }).click();
+  await expect(confirmation(page).getByRole('alert')).toContainText('metadata offline');
+  await expect(page.getByLabel('Current recording')).toContainText(A);
+  await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeDisabled();
+  expect(deletes).toBe(0);
+  await page.route('**/api/meta', route => route.fulfill({ json: metadata }));
+  await page.routeWebSocket('**/ws/replay', route => route.close());
+  await confirmation(page).getByRole('button', { name: 'Switch to built-in assignment' }).click();
+  await expect(confirmation(page).getByRole('button', { name: 'Reconnect built-in assignment' })).toBeEnabled();
+  await expect(confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true })).toBeDisabled();
+  expect(deletes).toBe(0);
+  await page.routeWebSocket('**/ws/replay', route => route.send(JSON.stringify(initial)));
+  await confirmation(page).getByRole('button', { name: 'Reconnect built-in assignment' }).click();
+  await expect(confirmation(page)).toContainText('Built-in assignment loaded');
+  await confirmation(page).getByRole('button', { name: 'Permanently delete', exact: true }).click();
+  expect(deletes).toBe(1); expect(server.errors).toEqual([]);
+});

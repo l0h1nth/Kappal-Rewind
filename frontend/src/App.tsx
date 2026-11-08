@@ -79,6 +79,10 @@ export function App() {
     </footer>
     <UploadCsv onImported={() => setLibraryRevision(value => value + 1)} />
     <DatasetLibrary revision={libraryRevision} activeDatasetId={recording.id} selecting={switching}
+      builtinReplayReady={recording.id === 'builtin' && status === 'connected' && frame !== null && (frame.dataset_id ?? 'builtin') === 'builtin'}
+      builtinReplayFailed={recording.id === 'builtin' && (status === 'error' || status === 'disconnected')}
+      switchError={metadataError ?? (recording.id === 'builtin' ? error : null)}
+      onSwitchToBuiltin={() => recording.id === 'builtin' ? reconnect() : setRequested({ id: 'builtin', name: 'Built-in assignment' })}
       onReplay={item => setRequested({ id: item.dataset_id, name: item.original_filename })} />
   </main>;
 }

@@ -94,8 +94,12 @@ Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
 
 **Delete** on an upload card opens a filename/ID confirmation. Pending requests
 cannot be submitted twice; success refreshes the list and preserves other previews
-and playback. A loaded recording is kept open on conflict: explicitly switch away
-or close every tab using it, then retry. Disconnect processing may take a moment.
+and playback. For the currently loaded recording, **Permanently delete** is
+blocked. Use **Switch to built-in assignment** inside the confirmation, wait for
+**Built-in assignment loaded**, then confirm deletion. Switching alone does not
+delete anything. Metadata/connection failures offer retry or reconnect locally.
+A finished replay still owns a live socket; close or switch away in every tab using
+it. Other-tab conflicts remain 409; disconnect processing may take a moment.
 
 `DELETE /api/datasets/{id}` returns 200 `{dataset_id, deleted:true}`, 403 for
 `builtin`, 422 for malformed IDs, 404 for absent/unavailable metadata, and 409

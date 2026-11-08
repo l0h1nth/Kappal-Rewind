@@ -198,3 +198,10 @@ this file records contributions and reviewer scope.
   test uploads were deleted; normal upload storage was not used for destructive
   checks. Map tiles were mocked and temporary screenshots visually inspected;
   no human verification, scaling results, final screenshot or publishing claimed.
+- E4 follow-up: Codex traced the user's loaded-singleton screenshot to a missing
+  confirmation-local switch action, reproduced a failing regression and added
+  explicit switch/readiness/reconnect handling. Independent release review ran
+  12 library Firefox tests on :5182 and found no remaining issue. Codex ran 36
+  browser/24 deletion backend tests, build, main Docker rebuild and real-browser
+  main read-only switch plus isolated two-tab deletion checks; normal library
+  metadata remained unchanged. Original WebSocket/source/whitespace checks passed.
