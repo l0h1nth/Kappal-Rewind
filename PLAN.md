@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is ship markers and selected-vessel full-route inspection; final submission remains deferred.
+Python/FastAPI and WebSockets. Current authorized scope is the independent replay-column and recording-dialog layout fix; final submission remains deferred.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -122,6 +122,11 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [x] Verify trusted built-in/Parquet lookup, cache/cancellation/deletion safety and dataset-switch stale-response guards.
 - [x] Execute 225 backend/78 browser tests, build, main Docker/real browser checks (including 50 vessels) and independent data/replay/release reviews.
 
+## Replay layout and recording information fix
+- [x] Confirm shared-row sizing with live measurements; nest map/timeline independently from sidebar height.
+- [x] Replace expanding metadata with an accessible responsive dialog, preserving recording/replay behavior.
+- [x] Verify 84 browser tests, build, main Docker, four-width/40-state measurements, screenshots and independent reviews.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
@@ -129,5 +134,5 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
 **Review gate:** Phases 1–6, E1–E4, E5a, I1, I2, I3 and both frontend redesign stages are complete with independent reviews appropriate to each scope.
-Stop after the ship/full-route enhancement, before further E5 work or Phase 7 final verification,
+Stop after the replay-column/dialog fix, before further E5 work or Phase 7 final verification,
 screenshot, repository cleanup and submission preparation.

@@ -19,7 +19,7 @@ for (const [width, height] of [[1440, 900], [1280, 800], [768, 1024], [390, 844]
       expect(bounds.width / workspace.width).toBeGreaterThan(.60);
       expect(bounds.width / workspace.width).toBeLessThan(.70);
       const timeline = (await page.getByRole('region', { name: 'Playback controls' }).boundingBox())!;
-      expect(timeline.width).toBeGreaterThan(workspace.width - 2);
+      expect(Math.abs(timeline.width - (await page.locator('.map-card').boundingBox())!.width)).toBeLessThan(2);
       expect(timeline.y).toBeGreaterThan(bounds.y + bounds.height);
     }
     const replay = page.getByRole('tab', { name: 'Replay', exact: true });

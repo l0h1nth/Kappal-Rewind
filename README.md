@@ -43,7 +43,7 @@ time/bounds; return to the built-in assignment through the Recordings tab. Uploa
 keeps the current replay. Uploads support up to **50 MiB / 1,000,000 source rows**
 with disk-backed normalization. Deleting a loaded upload closes this tab’s replay and leaves an empty workspace;
 other active clients block deletion. Run one backend worker. Upload feedback distinguishes transfer
-from processing; expand About this recording in Replay for counts and times.
+from processing; open About this recording in Replay for counts and times.
 Replay and Recordings have separate responsive views with a readable observation-preview table.
 Selected-vessel **Show full route** previews the complete journey, including future fixes; gaps stay split.
 Exact routes are limited to 20,000 positions/512 segments; larger routes report an error, while replay remains available.

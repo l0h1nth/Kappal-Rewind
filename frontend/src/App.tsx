@@ -136,15 +136,15 @@ export function App() {
             {!recording && <div className="empty-workspace" role="status"><strong>No recording loaded.</strong><span>Choose a recording to start replay.</span><button onClick={() => setTab('recordings')}>Choose recording</button></div>}
             <p className="map-card-note">Recorded GPS positions <span>Trails show the last 60 seconds</span></p>
           </section>
+          <Timeline key={recording?.id ?? 'empty'} frame={frame} metadata={activeMetadata} connected={!!recording && status === 'connected'} busy={busy} send={send} />
+          <footer><span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : recording ? 'Waiting for replay state' : 'No recording loaded'}</span>
+            <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span></footer>
         </div>
-        <Timeline key={recording?.id ?? 'empty'} frame={frame} metadata={activeMetadata} connected={!!recording && status === 'connected'} busy={busy} send={send} />
         <aside className="workspace-sidebar" aria-label="Vessel information">
           <VesselPanel vesselIds={activeMetadata?.vessel_ids ?? []} datasetId={recording?.id ?? 'empty'} onSelect={selectFromSearch} selected={selected} frame={frame} connected={status === 'connected'} route={vesselRoute} />
           {activeMetadata && recording && <RecordingInfo key={`info:${recording.id}`} datasetId={recording.id} name={recording.name} metadata={activeMetadata} />}
         </aside>
       </div>
-      <footer><span>{frame ? `${frame.vessels.length} vessels observed · ${frame.playing ? 'Playing' : 'Paused'}` : recording ? 'Waiting for replay state' : 'No recording loaded'}</span>
-        <span className="selection" aria-live="polite">{selected ? `${selected} selected${!selectedPresent ? ' · No current observation' : ''}` : 'Select a vessel to identify it'}</span></footer>
     </section>
     <section ref={recordingsPanel} id="recordings-tools" role="tabpanel" aria-labelledby="recordings-tab" hidden={tab !== 'recordings'} className="recordings-view">
       <div className="view-heading recordings-heading"><div><p className="section-kicker">Keep your journeys together</p><h2>My Recordings</h2><p>Upload, explore and replay your vessel recordings.</p></div>

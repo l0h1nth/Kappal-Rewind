@@ -365,3 +365,7 @@ be different state transitions?
 - Dashed full routes include future recorded fixes; solid 60-second trails remain server replay history. Neither changes recorded coordinates. Exact segments split gaps/jumps before rendering; this version uses explicit rejection bounds instead of geometric simplification, preserving all accepted-route endpoints and shape.
 - Route effects depend on dataset/vessel/toggle, never frames. AbortController plus identity guards prevent stale responses; eight-entry caches bound retention. HTTP cancellation does not stop a worker query, so its deletion reservation lasts until completion. Interview question: why can cancelling fetch be insufficient to release a backend file safely?
 - References: [Leaflet paths/markers](https://leafletjs.com/reference.html), [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController).
+
+## Independent columns and recording dialog
+
+A CSS Grid row grows to its tallest item; align-items:start does not shrink the row itself. Keeping map and timeline inside one nested column gives them a predictable gap even when the sibling sidebar grows. A native modal dialog occupies the top layer without moving document content; a bounded, focusable scrolling body keeps long metadata accessible while Close remains visible. Test focus return, Escape and actual element positions—not only successful rendering.

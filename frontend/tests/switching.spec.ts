@@ -202,9 +202,8 @@ test('vessel search replaces metadata IDs and clears the filter after switching'
 
 test('current recording information shows exact metadata, timezone and optional validation counts', async ({ page }) => {
   await prepare(page);
-  const info = page.getByLabel('Recording information', { exact: true });
-  await expect(info.locator('summary')).toContainText('About this recording');
-  await info.locator('summary').click();
+  const info = page.getByRole('dialog', { name: 'Recording information', exact: true });
+  await page.getByRole('button', { name: 'About this recording', exact: true }).click();
   await expect(info).toContainText('tracks.csv');
   await expect(info).toContainText('Recording start · IST (Asia/Kolkata)');
   await expect(info).toContainText('02 Nov 2026, 09:00:00');
@@ -212,9 +211,9 @@ test('current recording information shows exact metadata, timezone and optional 
   await page.route(`**/api/datasets/${A}`, route => route.fulfill({ json: { ...record(A),
     validation: { ...record(A).validation, source_row_count: 7, naive_timestamp_rows: 7,
       discarded_row_count: 2, exact_duplicate_rows: 2, missing_observation_seconds: 0 } } }));
+  await info.getByRole('button', { name: 'Close', exact: true }).click();
   await choose(page, A); await loaded(page, A);
-  await expect(info.locator('summary')).toHaveText('About this recording');
-  await info.locator('summary').click();
+  await page.getByRole('button', { name: 'About this recording', exact: true }).click();
   await expect(info).toContainText('a.csv');
   await expect(info.locator('time').first()).toHaveText('01 Jan 2024, 05:30:00');
   await expect(info.locator('time').last()).toHaveText('01 Jan 2024, 05:30:04');
@@ -228,13 +227,14 @@ test('late recording information cannot replace another recording and metadata f
   await choose(page, A); await loaded(page, A);
   await page.route(`**/api/datasets/${B}`, route => route.fulfill({ status: 503, json: { detail: 'unavailable' } }));
   await choose(page, B); await loaded(page, B);
-  const info = page.getByLabel('Recording information', { exact: true });
-  await info.locator('summary').click();
+  const info = page.getByRole('dialog', { name: 'Recording information', exact: true });
+  await page.getByRole('button', { name: 'About this recording', exact: true }).click();
   await expect(info).toContainText('Validation counts unavailable'); release();
   await expect(info).toContainText('b.csv'); await expect(info).not.toContainText('a.csv');
   await page.route(`**/api/datasets/${B}`, route => route.fulfill({ json: record(B) }));
   await page.getByRole('button', { name: 'Retry recording information' }).click();
   await expect(info).toContainText('Missing vessel-seconds');
+  await info.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(play(page)).toBeEnabled();
 });
 
