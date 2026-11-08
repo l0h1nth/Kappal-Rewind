@@ -11,6 +11,8 @@ from app.catalog import StoredDataset, utc_instant
 from app.datasets import MAX_SOURCE_ROWS
 from app.ingestion import Dataset, Observation
 
+MAX_WINDOW_CACHE_ROWS = 60_000  # Per session; large frames still return all observations.
+
 
 class TrackStore(Protocol):
     dataset_id: str
@@ -90,6 +92,27 @@ class ParquetTrackStore:
         key = (start, end)
         if self._cache_key == key:
             return self._cache
+        # Reuse only a forward overlap of the exact previous requested window.
+        # Backward/outside seeks reconstruct from Parquet; no future rows are retained.
+        retained = ()
+        query_start = start
+        if self._cache_key is not None:
+            cached_start, cached_end = self._cache_key
+            if cached_start <= start <= cached_end < end:
+                retained = tuple(o for o in self._cache if start <= o.timestamp <= cached_end)
+                # Observations are whole-second UTC instants, even if callers use
+                # fractional window boundaries. Start at the next recorded second.
+                query_start = cached_end.replace(microsecond=0) + timedelta(seconds=1)
+        observations = retained + self._read_window(query_start, end)
+        if len(observations) > self._metadata["record_count"]:
+            raise ValueError("Stored recording exceeds validated row count")
+        if len(observations) <= MAX_WINDOW_CACHE_ROWS:
+            self._cache_key, self._cache = key, observations
+        else:
+            self._cache_key, self._cache = None, ()
+        return observations
+
+    def _read_window(self, start: datetime, end: datetime) -> tuple[Observation, ...]:
         with self._connection() as connection:
             rows = connection.execute("""
                 SELECT track_id, CAST(timestamp AT TIME ZONE 'UTC' AS VARCHAR),
@@ -106,5 +129,4 @@ class ParquetTrackStore:
                     not -90 <= observation.lat <= 90 or not -180 <= observation.lon <= 180 or
                     observation.speed_knots < 0 or not 0 <= observation.heading < 360):
                 raise ValueError("Invalid normalized observation in stored recording")
-        self._cache_key, self._cache = key, observations  # Replace, never append history.
         return observations

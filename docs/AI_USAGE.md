@@ -276,3 +276,22 @@ this file records contributions and reviewer scope.
   Real upload tests used an isolated persistent volume; main-recording metadata and
   previews stayed unchanged. Tiles were mocked and temporary mobile QA inspected;
   no human verification or general performance improvement is claimed.
+
+## I3 — 8 Nov 2026
+
+- Codex inspected storage/replay/lifecycle code, authored four isolated profiling
+  scripts and five regression tests, measured baseline/current behavior, and kept
+  only bounded overlap reuse and unchanged-tick avoidance. Applied csv-audit,
+  replay-verification and build-journal skills; consulted official DuckDB tuning,
+  Parquet/indexing and PostgreSQL concurrency documentation.
+- Independent reviewers inspected data/replay/release scope without implementation
+  edits. Data review reproduced the fractional-window omission, then verified all
+  12 Parquet pairs, complete original parity and four targeted tests. Replay review
+  ran 75 tests. Release review passed 36 targeted tests and identified hardcoded resource sampling and inaccurate
+  paint terminology in probes; both corrected. Benchmark-only parity initially
+  exhausted its memory-only SQL budget; disk-backed verification fixed that check.
+- Codex executed 216 backend/60 Firefox tests, production build, paired real Docker
+  HTTP/WebSocket and production-browser probes, main rebuild and read-only existing
+  recording preservation/integration checks. Browser tiles were mocked; timing uses
+  next-rAF feedback proxies. No human verification, generic capacity guarantee,
+  final submission verification, commit or push is claimed.

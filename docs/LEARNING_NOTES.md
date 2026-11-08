@@ -302,3 +302,29 @@ animated display coordinates? What does an effect cleanup cancel?
 Interview questions: Why is 100% uploaded not 100% imported? Why omit a progress
 value during processing? What prevents an aborted request from overwriting retry
 state? Why must an uncertain response not automatically trigger another import?
+
+## I3 — Profile before optimizing
+
+- **Profiling:** separate import, SQL, Python objects, frame building, JSON, delivery
+  and browser work. Fresh connections and warm OS files are different conditions;
+  compare identical inputs and medians. See [measurements](BENCHMARKS.md).
+- **Query plans/indexing:** EXPLAIN ANALYZE showed timestamp pushdown into sorted
+  Parquet row groups. Reading fewer groups/rows matters; an index or SQL rewrite
+  is not automatically useful. All projected replay/provenance columns are needed.
+- **Caching/memory:** `ParquetTrackStore.get_window` retains only a forward overlap
+  and fetches the new tail. Each socket owns its store; backward seeks reconstruct.
+  The 60,000-row cap bounds retention, not returned frames or process RSS. DuckDB's
+  128 MB budget also excludes Python objects, HTTP spools and other native memory.
+- **Measured tradeoff:** `stream_replay` checks authoritative state before building
+  unchanged frames, preserving command responses. Faster 10× generation can send
+  more snapshots and increase bandwidth; cache hits still require frame/JSON work.
+- **Interview questions:** Why can a 7 ms SQL plan yield a ~90 ms frame? Why does a
+  faster server increase egress? When do immutable Parquet files suit embedded
+  DuckDB, and when do transactional writes/shared coordination favor PostgreSQL?
+  At 500 vessels, one day means 43.2M rows, outside tested limits; discuss chunking,
+  time partitions, per-client budgets and bounded-window reads before promising it.
+
+Sources: [DuckDB tuning](https://duckdb.org/docs/2.0/guides/performance/how_to_tune_workloads),
+[Parquet filtering](https://duckdb.org/docs/2.0/data/parquet/overview),
+[indexing](https://duckdb.org/docs/2.0/guides/performance/indexing),
+[PostgreSQL concurrency](https://www.postgresql.org/docs/current/mvcc-intro.html).

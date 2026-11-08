@@ -57,6 +57,13 @@ async def stream_replay(
                     force_state = True
             # Also publish due progress after errors; bad traffic cannot stop the clock.
             if force_state or loop.time() >= next_update:
+                # Most 1x timer checks still refer to the same recorded second.
+                # Commands always reconstruct immediately, even at an unchanged second.
+                current = session.snapshot()
+                state = (current["second"], current["playing"], current["speed"])
+                if not force_state and state == last_state:
+                    next_update = loop.time() + UPDATE_INTERVAL
+                    continue
                 frame = await run_in_threadpool(build_frame, dataset, session)
                 state = (frame["second"], frame["playing"], frame["speed"])
                 if force_state or state != last_state:

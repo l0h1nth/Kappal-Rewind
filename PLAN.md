@@ -98,12 +98,18 @@ E1–E4 and E5a are complete. Further scaling work remains deferred.
 - [x] Add compact current-recording metadata, labeled times and available validation counts.
 - [x] Verify 211 backend/60 browser tests, build, real transfer/cancellation, main Docker/data preservation and independent reviews.
 
+## I3 — Backend profiling and optimization
+- [x] Measure original/100K/500K/1M multi-vessel imports, RSS/disk, SQL, replay, wire and browser behavior in isolated storage.
+- [x] Keep measured bounded forward-window reuse and unchanged automatic-build avoidance; preserve source/protocol/session correctness.
+- [x] Verify 216 backend/60 Firefox tests, build, real Docker/WebSocket integration, complete row parity and independent reviews.
+- [x] Record before/after measurements, limits and scaling/learning guidance in docs/BENCHMARKS.md.
+
 ## 7. Final Verification & Submission
 - [ ] Integration checks cover clean startup, multi-client behavior, seek boundaries and dataset anomalies.
 - [ ] README has run/data/scaling/resources sections and a final application screenshot.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6, E1–E4, E5a, I1 and I2 are complete with independent reviews appropriate to each scope.
-Stop after I2, before further E5 work or Phase 7 final verification,
+**Review gate:** Phases 1–6, E1–E4, E5a, I1, I2 and I3 are complete with independent reviews appropriate to each scope.
+Stop after I3, before further E5 work or Phase 7 final verification,
 screenshot, repository cleanup and submission preparation.

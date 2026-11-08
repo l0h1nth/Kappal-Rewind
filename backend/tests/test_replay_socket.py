@@ -201,3 +201,30 @@ def test_handler_cancellation_cleans_pending_receive():
             assert client.task.done()
             assert set(asyncio.all_tasks()) == baseline
     asyncio.run(check())
+
+
+def test_unchanged_automatic_ticks_skip_frame_build_but_commands_still_reconstruct(monkeypatch):
+    original = replay_socket.build_frame
+    calls = []
+    def build(*args):
+        calls.append(1)
+        return original(*args)
+    monkeypatch.setattr(replay_socket, 'build_frame', build)
+    monkeypatch.setattr(replay_socket, 'UPDATE_INTERVAL', .01)
+    async def check():
+        clock = FakeClock()
+        app = create_app(SOURCE, replay_clock=clock)
+        async with app.router.lifespan_context(app), SocketClient(app) as client:
+            await client.receive()
+            await client.send({'type': 'play'}); await client.receive()
+            before = len(calls)
+            await asyncio.sleep(.06)
+            assert len(calls) == before
+            clock.advance(1)
+            assert (await client.receive())['second'] == 1
+            assert len(calls) == before + 1
+            # A seek at the unchanged second still gets an immediate complete frame.
+            await client.send({'type': 'seek', 'second': 1})
+            assert (await client.receive())['second'] == 1
+            assert len(calls) == before + 2
+    asyncio.run(check())

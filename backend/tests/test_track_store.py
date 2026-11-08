@@ -180,3 +180,62 @@ def test_uploaded_speed_progress_and_automatic_stop(tmp_path, monkeypatch, speed
             assert finished['second'] == 129 and not finished['playing']
 
     asyncio.run(check())
+
+
+def test_forward_overlap_reads_only_new_seconds_and_evicts_old_observations(tmp_path, monkeypatch):
+    _, _, data, store = recording(tmp_path)
+    calls = []
+    original = store._read_window
+    def read(start, end):
+        calls.append((start, end))
+        return original(start, end)
+    monkeypatch.setattr(store, '_read_window', read)
+    memory = MemoryTrackStore(data)
+    for first, last in [(0, 59), (1, 60), (5, 64), (70, 129), (11, 70), (0, 0)]:
+        start, end = data.start + timedelta(seconds=first), data.start + timedelta(seconds=last)
+        assert store.get_window(start, end) == tuple(memory.get_window(start, end))
+        assert all(start <= o.timestamp <= end for o in store._cache)
+        assert len(store._cache) <= 120
+    assert calls == [(data.start, data.start + timedelta(seconds=59)),
+                     (data.start + timedelta(seconds=60), data.start + timedelta(seconds=60)),
+                     (data.start + timedelta(seconds=61), data.start + timedelta(seconds=64)),
+                     (data.start + timedelta(seconds=70), data.start + timedelta(seconds=129)),
+                     (data.start + timedelta(seconds=11), data.start + timedelta(seconds=70)),
+                     (data.start, data.start)]
+
+
+def test_window_cache_has_row_cap_without_truncating_results(tmp_path, monkeypatch):
+    import app.track_store as module
+    _, _, data, store = recording(tmp_path)
+    monkeypatch.setattr(module, 'MAX_WINDOW_CACHE_ROWS', 4)
+    start, end = data.start, data.start + timedelta(seconds=10)
+    expected = tuple(MemoryTrackStore(data).get_window(start, end))
+    assert len(expected) == 22
+    assert store.get_window(start, end) == expected
+    assert store._cache_key is None and store._cache == ()
+    assert store.get_window(start, start) == expected[:2]
+    assert len(store._cache) == 2
+
+
+def test_overlapping_cache_handles_offset_equivalence_and_independent_stores(tmp_path):
+    root, metadata, data, store = recording(tmp_path)
+    other = ParquetTrackStore(lookup_dataset(root, metadata['dataset_id']))
+    start, end = data.start, data.start + timedelta(seconds=59)
+    expected = store.get_window(start, end)
+    offset = timezone(timedelta(hours=5, minutes=30))
+    assert store.get_window(start.astimezone(offset), end.astimezone(offset)) is expected
+    assert other._cache == ()
+    other.get_window(data.start + timedelta(seconds=70), data.end)
+    assert store._cache_key == (start, end)
+    assert other._cache_key != store._cache_key
+
+
+def test_fractional_window_boundaries_do_not_skip_next_whole_observation(tmp_path):
+    _, _, data, store = recording(tmp_path)
+    memory = MemoryTrackStore(data)
+    store.get_window(data.start, data.start + timedelta(seconds=.5))
+    for first, last in [(.5, 1.5), (1.5, 2.5)]:
+        start, end = data.start + timedelta(seconds=first), data.start + timedelta(seconds=last)
+        expected = tuple(o for o in memory.get_window(data.start, data.start + timedelta(seconds=3)) if start <= o.timestamp <= end)
+        assert store.get_window(start, end) == expected
+        assert len(expected) == 2

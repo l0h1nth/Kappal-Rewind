@@ -185,3 +185,14 @@
 - **Tradeoff:** visual position can lag by one observation interval. Missing/skipped
   seconds, commands, speed changes, >100m steps and date-line crossings snap instead;
   100m is a conservative visual guard, not data validation. Reduced motion snaps too.
+
+## I3 — bounded forward replay-window reuse
+- **Decision:** retain at most 60,000 observations per Parquet replay session, reuse
+  only a forward overlap and query its disjoint tail; skip automatic reconstruction
+  when the authoritative replay state is unchanged. Commands still force frames.
+- **Reason:** measured 1M/500-vessel adjacent frames improved 91.81→25.83 ms; repeated
+  same-second builds wasted work. Existing SQL pushdown already works.
+- **Alternative/tradeoff:** exact-only caching rereads overlap. Broader caches,
+  persistent connections or protocol deltas add lifecycle/memory/compatibility cost
+  without evidence needed here. Oversized windows return complete but uncached;
+  per-client frame memory and snapshot bandwidth remain. Architecture is unchanged.

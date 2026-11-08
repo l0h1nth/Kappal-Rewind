@@ -2,7 +2,7 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: Phase 6 reviewed** — interactive Leaflet map, directional markers, gap-split trails,
+**Status: I3 reviewed** — interactive Leaflet map, directional markers, gap-split trails,
 server-controlled timeline, Play/Pause/Reset, 1×/2×/5×/10× speeds and current vessel
 details. Final verification/submission preparation remain for Phase 7. See the [plan](PLAN.md).
 
@@ -55,10 +55,10 @@ remain absent positions. Source order is sorted in memory; invalid input fails
 startup with line errors. CSV bytes are unchanged. Evidence and limits: [data audit](docs/DATA_AUDIT.md).
 
 ## For 500 vessels and 24 hours
-At one observation per second that is 43.2 million rows. Replace full in-memory
-loading with time-indexed storage and windowed reads, stream only requested
-windows/deltas, and decimate older paths for display. Measure parsing, wire size
-and browser rendering before adding workers or changing the rendering approach.
+At one observation per second that is 43.2 million rows, beyond the current
+1M-row / 50 MiB limit. I3 tested 500 vessels for 2,000 seconds using bounded
+Parquet windows; longer recordings require separately tested ingestion/partitioning
+and concurrency budgets. Measurements and tradeoffs: [I3 benchmarks](docs/BENCHMARKS.md).
 
 ## AI and web resources
 Codex generated ingestion/replay/map/controls, tests and docs; independent AI reviewers check
