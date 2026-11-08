@@ -228,3 +228,18 @@ this file records contributions and reviewer scope.
   real isolated Nginx byte/row/cancellation/replay/browser/restart checks and main
   Docker rebuild with existing-recording preservation. UI tiles were mocked;
   no human verification, final screenshot or month-scale result is claimed.
+
+## Vessel selection fix — 8 Nov 2026
+
+- Codex traced native pointer → Leaflet → React selection, reproduced a lost click
+  across heading-driven SVG replacement, applied the CSS fix and added six pointer
+  regressions plus selection assertions after recording switches. Used the
+  replay-verification and build-journal skills; consulted MDN pointer-events and
+  React state-preservation documentation alongside installed Leaflet source.
+- Independent replay review passed 56 backend replay tests and checked event/state
+  ownership. Release review found repeated-target test assertions too weak;
+  alternating targets fixed that finding, with no remaining actionable findings.
+- Codex ran backend/browser/build checks, rebuilt main Docker, and exercised real
+  20/100-vessel playback using a new upload only in the isolated test volume.
+  Browser instrumentation checked marker identity, click feedback and animation
+  frame intervals. Tiles were mocked; no human verification is claimed.

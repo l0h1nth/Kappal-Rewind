@@ -67,6 +67,11 @@ test('playing builtin → London → Tokyo → builtin resets state and refits t
     const marker = (await page.getByTitle(id === A ? 'Vessel LONDON' : 'Vessel TOKYO', { exact: true }).boundingBox())!;
     expect(marker.x).toBeGreaterThan(box.x); expect(marker.x + marker.width).toBeLessThan(box.x + box.width);
     expect(marker.y).toBeGreaterThan(box.y); expect(marker.y + marker.height).toBeLessThan(box.y + box.height);
+    const target = page.getByTitle(id === A ? 'Vessel LONDON' : 'Vessel TOKYO', { exact: true });
+    await target.click();
+    await expect(target).toHaveClass(/is-selected/);
+    await expect(page.getByRole('complementary', { name: 'Vessel details' }).getByRole('heading'))
+      .toHaveText(id === A ? 'LONDON' : 'TOKYO');
   }
   await expect(page.locator('.vessel-marker')).toHaveCount(2);
   await page.getByRole('button', { name: 'Zoom in' }).click();

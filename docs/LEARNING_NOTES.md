@@ -246,3 +246,18 @@ Interview questions: Why are byte and row limits both necessary? Why does a
 processing batch boundary not end a duplicate interval? Why compare EXCEPT ALL in
 both directions? Why must a cancelled HTTP handler wait before closing its spool?
 What work still scans a whole file despite a small returned replay window?
+
+## Vessel selection — stable pointer targets
+
+Leaflet translates a native marker click into `VesselMarker`'s callback, which
+calls App's local `setSelected(id)` and immediately updates the highlight/panel.
+Heading changes recreate DivIcon's inner HTML; a pointer gesture must target the
+stable outer marker, so decorative glyphs use
+[pointer-events: none](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/pointer-events).
+This retains the existing 32px target and keyboard interaction.
+
+A React rerender updates props; it need not remount the marker. Stable ID keys
+preserve identity ([React state preservation](https://react.dev/learn/preserving-and-resetting-state)).
+Replay frames update observations, while local selection persists through gaps;
+selection needs no server query or acknowledgement. Interview question: why can
+replacing a child DOM node lose a click even when its React component stays mounted?
