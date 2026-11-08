@@ -132,3 +132,95 @@ test('successful upload automatically refreshes library without resetting replay
   expect(replay.connections()).toBe(1);
   expect(replay.errors).toEqual([]);
 });
+
+const remove = (page: Page, id: string) => page.getByRole('button', { name: `Delete duplicate.csv (${id.slice(0, 8)})`, exact: true });
+const confirmation = (page: Page) => page.getByRole('alertdialog', { name: 'Delete recording?' });
+
+test('delete requires named permanent confirmation, prevents duplicate submits and preserves another preview/replay', async ({ page }) => {
+  const server = await setup(page);
+  let records = [recording(), recording(B)], requests = 0;
+  await page.route('**/api/datasets', route => route.fulfill({ json: records }));
+  await refresh(page).click();
+  await page.route(`**/api/datasets/${B}`, route => route.fulfill({ json: recording(B) }));
+  await page.route(`**/api/datasets/${B}/preview?limit=20`, route => route.fulfill({ json: { dataset_id: B, rows: [observation('KEEP-B')] } }));
+  await view(page, B).click();
+  await expect(page.getByRole('table')).toContainText('KEEP-B');
+  const table = await page.getByRole('table').elementHandle();
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
+  let release = () => {}; const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`**/api/datasets/${A}`, async route => {
+    expect(route.request().method()).toBe('DELETE'); requests++;
+    await held; records = [recording(B)];
+    await route.fulfill({ json: { dataset_id: A, deleted: true } });
+  });
+  await remove(page, A).click();
+  await expect(confirmation(page)).toContainText('duplicate.csv');
+  await expect(confirmation(page)).toContainText('Permanently');
+  await expect(confirmation(page)).toContainText('cannot be undone');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click(); expect(requests).toBe(0);
+  await remove(page, A).click();
+  await page.getByRole('button', { name: 'Permanently delete', exact: true }).dblclick();
+  await expect(page.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled();
+  await expect(remove(page, B)).toBeDisabled(); expect(requests).toBe(1);
+  release();
+  await expect(remove(page, A)).toHaveCount(0); await expect(remove(page, B)).toBeVisible();
+  await expect(library(page).getByRole('status')).toContainText('Deleted duplicate.csv');
+  await expect(page.getByRole('table')).toContainText('KEEP-B');
+  expect(await table!.evaluate(el => el === document.querySelector('table'))).toBe(true);
+  await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
+  expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
+});
+
+test('409 keeps the loaded recording playing until the user explicitly switches before retrying delete', async ({ page }) => {
+  const server = await setup(page);
+  const { metadata, initial } = await import('./fixtures');
+  let removed = false;
+  await page.route('**/api/datasets', route => route.fulfill({ json: removed ? [] : [recording()] }));
+  await refresh(page).click();
+  await page.route(`**/api/replay/${A}/meta`, route => route.fulfill({ json: { ...metadata, dataset_id: A } }));
+  await page.routeWebSocket(`**/ws/replay?dataset_id=${A}`, route => {
+    route.send(JSON.stringify({ ...initial, dataset_id: A }));
+    route.onMessage(() => route.send(JSON.stringify({ ...initial, dataset_id: A, playing: true })));
+  });
+  await page.getByRole('button', { name: `Replay duplicate.csv (${A.slice(0, 8)})`, exact: true }).click();
+  await expect(page.getByLabel('Current recording')).toContainText(A);
+  await page.getByRole('button', { name: '▶ Play', exact: true }).click();
+  await page.route(`**/api/datasets/${A}`, route => route.fulfill({ status: 409, json: { detail: 'busy' } }));
+  await remove(page, A).click();
+  await expect(confirmation(page)).toContainText('loaded here');
+  await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
+  await expect(library(page).getByRole('alert')).toContainText('explicitly switch');
+  await expect(page.getByLabel('Current recording')).toContainText(A);
+  await expect(page.getByRole('button', { name: 'Pause' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Replay built-in assignment' }).click();
+  await expect(page.getByLabel('Current recording')).toContainText('Built-in assignment');
+  await expect(page.getByRole('button', { name: '▶ Play', exact: true })).toBeEnabled();
+  await page.route(`**/api/datasets/${A}`, route => { removed = true; return route.fulfill({ json: { dataset_id: A, deleted: true } }); });
+  await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
+  await expect(remove(page, A)).toHaveCount(0);
+  await expect(library(page)).toContainText('No uploaded recordings yet');
+  expect(server.errors).toEqual([]);
+});
+
+for (const partial of [false, true]) {
+  test(`storage failure ${partial ? 'after' : 'before'} rename has an explicit recoverable UI state`, async ({ page }) => {
+    const server = await setup(page);
+    let failed = false;
+    await page.route('**/api/datasets', route => route.fulfill({ json: failed && partial ? [recording(B)] : [recording(), recording(B)] }));
+    await refresh(page).click();
+    await page.route(`**/api/datasets/${A}`, route => {
+      failed = true;
+      return route.fulfill({ status: 500, json: { detail: partial ? 'Removed from library; administrator must finish cleanup.' : 'Could not delete; stored files were not removed.', removed_from_library: partial } });
+    });
+    await remove(page, A).click(); await page.getByRole('button', { name: 'Permanently delete', exact: true }).click();
+    await expect(library(page).getByRole('alert')).toContainText(partial ? 'administrator' : 'not removed');
+    if (partial) {
+      await expect(remove(page, A)).toHaveCount(0); await expect(confirmation(page)).toHaveCount(0);
+    } else {
+      await expect(remove(page, A)).toBeEnabled(); await expect(confirmation(page)).toBeVisible();
+    }
+    await expect(remove(page, B)).toBeVisible();
+    expect(server.connections()).toBe(1); expect(server.errors).toEqual([]);
+  });
+}

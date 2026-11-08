@@ -1,4 +1,4 @@
-# Uploaded recordings — E1–E3
+# Uploaded recordings — E1–E4
 
 Open **Upload CSV**, or POST one multipart `file` to `/api/datasets`:
 ```sh
@@ -39,7 +39,7 @@ with duckdb.connect() as connection:
 ```
 Volume data survives container recreation; `docker compose down -v` deletes it.
 Handled failures clean staging files; abrupt process termination may leave a hidden
-`.import-*` directory. Total stored disk usage has no quota. Deletion and partitioning remain deferred.
+`.import-*` directory. Total stored disk usage has no quota. Partitioning remains deferred.
 
 ## E2 — library, details and preview
 
@@ -89,3 +89,43 @@ Read-only Nginx smoke with two existing upload IDs (no new data or deletion):
 ```sh
 .venv/bin/python scripts/verify_multidataset.py FIRST_UUID SECOND_UUID
 ```
+
+## E4 — permanent deletion
+
+**Delete** on an upload card opens a filename/ID confirmation. Pending requests
+cannot be submitted twice; success refreshes the list and preserves other previews
+and playback. A loaded recording is kept open on conflict: explicitly switch away
+or close every tab using it, then retry. Disconnect processing may take a moment.
+
+`DELETE /api/datasets/{id}` returns 200 `{dataset_id, deleted:true}`, 403 for
+`builtin`, 422 for malformed IDs, 404 for absent/unavailable metadata, and 409
+while any socket (including paused/opening) uses it or deletion is already running.
+Missing/corrupt metadata and symlinks are not cleanup candidates. Unexpected extra
+files refuse deletion. Errors omit server paths. No built-in CSV route is removable.
+
+Deletion atomically renames the trusted UUID directory to a hidden
+`.delete-{id}-{nonce}` sibling, then unlinks only Parquet/JSON and removes the empty
+directory. Before-rename failure returns generic 500 and leaves the recording
+visible. After-rename failure returns 500 with `removed_from_library:true`; UI
+refreshes and reports incomplete disk cleanup. Discovery skips hidden directories,
+including after restart, so partial files never advertise a usable recording.
+
+Recovery is manual: stop the backend, inspect the affected `.delete-*` directory
+under the configured upload root, then remove only its remaining known regular
+files (`observations.parquet`, `metadata.json`) and empty directory. Investigate
+unexpected entries instead of recursive deletion; never restore a partially
+removed directory to its UUID name. Abrupt termination can leave hidden remnants;
+there is no automatic retry, batch delete or volume removal feature.
+
+Session counts/reservations coordinate **one backend process/event loop only**;
+do not run multiple Uvicorn workers or replicas. Descriptor-relative operations
+require the existing Linux/POSIX runtime. Stored observations, the DuckDB window
+logic and original replay behavior are unchanged. No authentication was added.
+
+The integration smoke creates its own recordings and requires an empty isolated
+Compose project/volume; never point it at the normal uploaded-recording volume:
+```sh
+.venv/bin/python scripts/verify_dataset_deletion.py --base-url http://localhost:18084
+```
+The script checks active-session conflicts and deletion, leaving one test recording
+for a separate Docker restart/persistence check; it does not provision Compose.

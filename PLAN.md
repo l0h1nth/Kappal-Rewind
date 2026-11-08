@@ -10,7 +10,7 @@ Final behavior: Leaflet map centered on this dataset; approximately 30 minutes o
 20 vessels; play/pause/scrub; markers and last-60-second trails; vessel selection
 with ID/speed/heading; FastAPI WebSocket streaming; React UI; `docker compose up`.
 The PDF permits MapLibre, Node and SSE; the user's selected stack is Leaflet,
-Python/FastAPI and WebSockets. Current authorized scope is Enhancement E3 only.
+Python/FastAPI and WebSockets. Current authorized scope is Enhancement E4 only.
 
 ## 1. Repository initialization and Docker foundation
 - [x] Minimal React/TypeScript/Vite page and FastAPI `/api/health` work through Nginx at :8080.
@@ -53,7 +53,7 @@ Python/FastAPI and WebSockets. Current authorized scope is Enhancement E3 only.
 
 ## Optional enhancements (E1–E5)
 
-E1–E3 are complete. E4–E5 remain provisional follow-ups.
+E1–E4 are complete. E5 remains provisional.
 
 ### E1 — CSV upload and Parquet storage
 - [x] Reuse normalization with explicit upload timezone, bounded CSV/multipart/work validation.
@@ -72,8 +72,11 @@ E1–E3 are complete. E4–E5 remain provisional follow-ups.
 - [x] Add Replay/back-to-builtin UI with dynamic metadata, safe switching and stable map.
 - [x] Verify regression/race/gap/cache tests, real Docker/WebSocket replay and independent reviews.
 
-### E4 — Dataset lifecycle (deferred)
-- [ ] Define and authorize deletion/management behavior and active-session safeguards.
+### E4 — Safe dataset deletion
+- [x] Add trusted-ID DELETE with builtin protection and recoverable filesystem changes.
+- [x] Reserve uploaded recordings for all live sockets; close races and release on failure/cancellation.
+- [x] Confirm permanent deletion in the library, handle conflict/pending/error states and preserve other previews/replay.
+- [x] Verify destructive tests only on temporary/isolated storage, Docker restart persistence, regressions and independent reviews.
 
 ### E5 — Enhancement hardening and scaling assessment (deferred)
 - [ ] Review enhanced workflow; measure before larger-file ingestion or partitioning work.
@@ -84,6 +87,6 @@ E1–E3 are complete. E4–E5 remain provisional follow-ups.
 - [ ] Logs and learning notes reflect actual checks; release review documents limitations.
 - [ ] User reviews and authorizes commit/push/submission. No automatic publishing.
 
-**Review gate:** Phases 1–6 and E1–E3 are complete with independent data/replay/release review.
-Stop after E3, before E4–E5 or Phase 7 final verification, screenshot, repository cleanup
+**Review gate:** Phases 1–6 and E1–E4 are complete with independent reviews appropriate to each scope.
+Stop after E4, before E5 or Phase 7 final verification, screenshot, repository cleanup
 and submission preparation.

@@ -116,3 +116,7 @@ footer { min-height: 48px; display: flex; justify-content: space-between; align-
   .timeline-label { flex-wrap: wrap; gap: 5px; }
   footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 12px 0; }
 }
+
+.delete-action { color: #f3aaa4; margin-left: .6rem; }
+.delete-confirmation { padding: 1rem; margin-block: 1rem; border: 1px solid #b4776f; border-radius: .5rem; overflow-wrap: anywhere; }
+.delete-confirmation p { margin-block: .65rem; }

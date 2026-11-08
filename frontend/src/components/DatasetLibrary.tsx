@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getDatasetJson, istDateTime, parsePreview, parseRecording, validationLabels, type PreviewRow, type Recording } from '../datasets';
 
 function RecordingDetails({ id }: { id: string }) {
@@ -56,13 +56,57 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Recording | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState<{ error: boolean; text: string } | null>(null);
+  const deleteRequest = useRef<AbortController | null>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; deleteRequest.current?.abort(); };
+  }, []);
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleteRequest.current) return;
+    const target = deleteTarget;
+    const controller = new AbortController();
+    deleteRequest.current = controller;
+    setDeletePending(true);
+    setDeleteMessage(null);
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(`/api/datasets/${target.dataset_id}`, { method: 'DELETE', signal: controller.signal });
+      const body = await response.json().catch(() => null);
+      if (!mounted.current) return;
+      const removed = body?.removed_from_library === true ||
+        (response.ok && body?.deleted === true && body?.dataset_id === target.dataset_id);
+      if (removed) {
+        setRecordings(previous => previous.filter(item => item.dataset_id !== target.dataset_id));
+        setSelected(previous => previous === target.dataset_id ? null : previous);
+        setDeleteTarget(null);
+        setRefresh(value => value + 1);
+      }
+      if (!response.ok) throw new Error(response.status === 409
+        ? 'This recording is currently being replayed or deleted. Close its replay or explicitly switch to the built-in assignment, then retry.'
+        : typeof body?.detail === 'string' ? body.detail : 'Recording could not be deleted. Refresh and retry.');
+      if (!removed) throw new Error('Deletion was not confirmed. Refresh the library before retrying.');
+      setDeleteMessage({ error: false, text: `Deleted ${target.original_filename} (${target.dataset_id.slice(0, 8)}).` });
+    } catch (failure) {
+      if (mounted.current) setDeleteMessage({ error: true, text: controller.signal.aborted
+        ? 'Deletion could not be confirmed. Refresh the library before retrying.'
+        : failure instanceof Error ? failure.message : 'Recording could not be deleted.' });
+    } finally {
+      window.clearTimeout(timeout);
+      deleteRequest.current = null;
+      if (mounted.current) setDeletePending(false);
+    }
+  }
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
     setLoading(true);
     setError(null);
-    setRecordings([]);
     getDatasetJson('/api/datasets', controller.signal).then(value => {
       if (!Array.isArray(value)) throw new Error('Invalid recording list.');
       return value.map(parseRecording);
@@ -71,14 +115,21 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
         setRecordings(value);
         setSelected(previous => value.some(recording => recording.dataset_id === previous) ? previous : null);
       }
-    }).catch(() => { if (active) { setError('Recording library could not be loaded. Try Refresh.'); setSelected(null); } })
+    }).catch(() => { if (active) { setError('Recording library could not be loaded. Try Refresh.'); setRecordings([]); setSelected(null); } })
       .finally(() => { window.clearTimeout(timeout); if (active) setLoading(false); });
     return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
   }, [refresh, revision]);
   return <section className="dataset-library" aria-label="My Recordings">
     <div className="library-header"><h2>My Recordings</h2><button onClick={() => setRefresh(value => value + 1)}>Refresh recordings</button></div>
     <p>Uploaded recordings · times shown in Asia/Kolkata (IST). Details are read-only; Replay opens a fresh paused session.</p>
-    {loading ? <p role="status">Loading recordings…</p> : error ? <p role="alert">{error}</p> : !recordings.length ?
+    {deleteMessage && <p role={deleteMessage.error ? 'alert' : 'status'}>{deleteMessage.text}</p>}
+    {deleteTarget && <section className="delete-confirmation" role="alertdialog" aria-label="Delete recording?" aria-describedby="delete-description">
+      <h3>Delete recording?</h3><p id="delete-description">Permanently delete <strong>{deleteTarget.original_filename}</strong> ({deleteTarget.dataset_id})? This removes its observations and metadata and cannot be undone.</p>
+      {deleteTarget.dataset_id === activeDatasetId && <p>This recording is loaded here. Explicitly switch to the built-in assignment before retrying deletion.</p>}
+      <button disabled={deletePending} onClick={() => { setDeleteTarget(null); setDeleteMessage(null); }}>Cancel</button>
+      <button className="delete-action" disabled={deletePending} onClick={confirmDelete}>{deletePending ? 'Deleting…' : 'Permanently delete'}</button>
+    </section>}
+    {loading && !recordings.length ? <p role="status">Loading recordings…</p> : error ? <p role="alert">{error}</p> : !recordings.length ?
       <p>No uploaded recordings yet. Upload a CSV to add one.</p> : <ul className="recording-list">
         {recordings.map(recording => <li key={recording.dataset_id}>
           <h3>{recording.original_filename}</h3><p className="recording-id">{recording.dataset_id}</p>
@@ -89,11 +140,14 @@ export function DatasetLibrary({ revision, activeDatasetId = 'builtin', selectin
           {onReplay && <button className="recording-replay" disabled={recording.dataset_id === activeDatasetId && !selecting}
             aria-label={`Replay ${recording.original_filename} (${recording.dataset_id.slice(0, 8)})`}
             onClick={() => onReplay(recording)}>{recording.dataset_id === activeDatasetId ? 'Currently loaded' : 'Replay'}</button>}
+          <button className="delete-action" disabled={deletePending}
+            aria-label={`Delete ${recording.original_filename} (${recording.dataset_id.slice(0, 8)})`}
+            onClick={() => { setDeleteTarget(recording); setDeleteMessage(null); }}>Delete</button>
         </li>)}
       </ul>}
-    {!loading && selected && !error && <>
+    {selected && !error && <>
       <button className="close-details" onClick={() => setSelected(null)}>Close recording details</button>
-      <RecordingDetails key={`${selected}:${revision}:${refresh}`} id={selected} />
+      <RecordingDetails key={`${selected}:${revision}`} id={selected} />
     </>}
   </section>;
 }

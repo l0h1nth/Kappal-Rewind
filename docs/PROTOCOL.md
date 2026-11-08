@@ -84,3 +84,10 @@ frames must match the selected ID. Selecting the currently loaded recording whil
 another loads cancels that request and keeps the existing session. Reconnect
 always starts fresh. Bounds update only on dataset change; ordinary frames retain
 user pan/zoom. The UI accepts missing frame identity only for legacy builtin frames.
+
+E4 adds live reference protection: uploaded recordings cannot be deleted while any
+socket uses them, even paused or opening. The route releases its reference on
+normal disconnect, failed initialization/send or cancellation. Switching away
+closes the previous socket; deletion is allowed after that close is processed.
+An in-progress delete rejects new socket selections with an error and close 1008.
+Other sessions are unaffected. HTTP deletion/recovery: [recordings](DATASETS.md#e4--permanent-deletion).

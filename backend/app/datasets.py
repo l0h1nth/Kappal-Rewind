@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
+from starlette.responses import JSONResponse
 from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
@@ -173,3 +174,22 @@ async def upload_dataset(request: Request):
             except Exception as error:
                 # Do not expose filesystem paths or DuckDB diagnostics to the browser.
                 raise HTTPException(500, "Dataset could not be stored. No dataset was published; try again.") from error
+
+
+@router.delete("/api/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: str, request: Request):
+    # Import here because lifecycle operations reuse this module's trusted lookup.
+    from app.dataset_lifecycle import CleanupPendingError
+
+    try:
+        await request.app.state.dataset_lifecycle.delete(request.app.state.upload_root, dataset_id)
+    except HTTPException:
+        raise
+    except CleanupPendingError:
+        return JSONResponse(status_code=500, content={
+            "detail": "Recording was removed from the library, but disk cleanup is incomplete. Ask the administrator to finish cleanup.",
+            "removed_from_library": True,
+        })
+    except Exception as error:
+        raise HTTPException(500, "Recording could not be deleted. Refresh the library and try again; stored files were not removed.") from error
+    return {"dataset_id": dataset_id, "deleted": True}

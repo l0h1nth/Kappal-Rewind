@@ -184,3 +184,34 @@ Why does opening a new socket simplify cache/session isolation? Why check identi
 as well as close the old socket? What remains costly despite bounded Python rows?
 Study test_track_store.py and switching.spec.ts for gaps, stale callbacks and
 cancelling an in-flight switch back to the current recording.
+
+## E4 — dataset lifecycle and DELETE
+
+- CRUD here means create (CSV upload), read (library/preview/replay), and delete;
+  editing normalized observations is not implemented. DELETE addresses the server
+  UUID, not the display filename. Success is 200; a repeated delete is 404 while
+  leaving the same absent state. 403 protects builtin, 422 rejects malformed IDs,
+  409 means an active reference/reservation, 500 means storage failure.
+- [DatasetLifecycle](../backend/app/dataset_lifecycle.py) tracks live uses, not a
+  second dataset registry. acquire runs before the first await; main.py releases
+  in finally, including cancellation. One paused socket still needs future reads.
+- A race occurs if deletion checks zero uses, yields, then another socket opens
+  before unlink. Synchronous event-loop check/reserve operations act as a gate:
+  either opening owns a reference or deletion owns the reservation. No disk work
+  runs inside that critical section. Multiple worker processes would need shared
+  coordination; these in-memory counts cannot protect them.
+- [delete_stored_dataset](../backend/app/dataset_lifecycle.py) uses catalog lookup,
+  no-follow directory descriptors and two explicit unlinks. Atomic rename hides
+  metadata/data together. A later failure leaves a hidden tombstone; the recovery
+  contract is in DATASETS.md. See [Python filesystem APIs](https://docs.python.org/3/library/os.html#files-and-directories).
+- Cancelling an HTTP request does not stop an OS worker operation. asyncio.shield
+  keeps the tracked task alive; its completion callback releases the reservation
+  and consumes unobserved errors. See [task cancellation/shield](https://docs.python.org/3/library/asyncio-task.html#shielding-from-cancellation).
+- DatasetLibrary confirms the filename/permanence, serializes confirmation clicks,
+  handles conflicts without changing replay, and refreshes while keeping another
+  recording's preview mounted. A timeout means the result is uncertain: refresh.
+
+Interview questions: Why do paused sockets block deletion? What breaks if the
+reference is incremented after opening Parquet? Why must HTTP cancellation not
+release a delete reservation immediately? Why hide a partial deletion rather than
+restore it? Why is a local counter insufficient with two Uvicorn workers?

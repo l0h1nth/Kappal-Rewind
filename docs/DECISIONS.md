@@ -143,3 +143,21 @@
   with one DuckDB thread, a 128 MiB engine limit and no disk spill. Cancellation
   may leave an already-running bounded worker query finishing. This is the E1
   small-recording limit, not measured scalable or memory-streaming ingestion.
+
+## E4 — reserve active recordings; hide before unlinking
+- **Decision:** keep per-upload live socket counts and deletion reservations in one
+  application lifecycle object, separate from the disk catalog. Paused sockets
+  count; reserve before store initialization and release in the route's finally.
+- **Reason:** replay opens files for each window. Blocking deletion preserves that
+  session and avoids a silent switch or mid-playback missing file.
+- **Alternative:** delete open files immediately, force-disconnect clients, or add
+  cross-process locking. Synchronous state transitions on one event loop have no
+  await between check and reservation; this fits the existing one-process server.
+- **Tradeoff:** run exactly one backend process/worker. A shielded worker task keeps
+  the deletion reservation until disk work completes, even after HTTP cancellation;
+  graceful shutdown waits for pending deletes. This is not a job queue.
+- **Consistency:** resolve the existing catalog entry, validate its two-file layout,
+  open directories without following symlinks, then rename to a hidden `.delete-*`
+  sibling before descriptor-relative unlink/rmdir. No recursive deletion. Failures
+  before rename preserve the visible recording; later failures remain hidden for
+  manual cleanup. No automatic recovery or power-loss durability is promised.

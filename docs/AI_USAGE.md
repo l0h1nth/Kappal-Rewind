@@ -177,3 +177,24 @@ this file records contributions and reviewer scope.
   default/two-upload WebSocket checks plus actual-backend Firefox switching with
   mocked tiles. Initial browser harness failures were corrected without changing
   playback assertions. No human verification, scaling measurement or publishing claimed.
+
+## E4 — 8 Nov 2026
+- Codex implemented per-session references/deletion reservations, trusted-ID DELETE,
+  atomic hide/nonrecursive filesystem cleanup, confirmation/error UI and tests.
+  Used replay-verification/build-journal skills; preserved ingestion/replay queries.
+- Consulted official [Python filesystem APIs](https://docs.python.org/3/library/os.html#files-and-directories)
+  and [asyncio cancellation/shield](https://docs.python.org/3/library/asyncio-task.html#shielding-from-cancellation)
+  for descriptor-relative operations and cancellation ownership.
+- Independent replay reviewer ran 70 existing replay/storage tests plus temporary
+  cancellation, failed-open/accept and multiple-paused-client probes. Release
+  reviewer ran 59 catalog/upload/storage tests and temporary deletion/partial-failure,
+  symlink/extra-file and cancelled-deletion probes. Neither edited implementation;
+  no confirmed actionable issue was reported. Final release review independently
+  passed 24 deletion tests, nine library Firefox tests on port 5182, original real
+  WebSocket smoke and read-only isolated API/Compose/source/whitespace checks;
+  documentation and temporary conflict visual review found no issue.
+- Codex ran 198 backend/33 Firefox tests, typecheck/build, source/whitespace checks,
+  and real isolated Docker/Nginx deletion/restart/browser checks. Only newly created
+  test uploads were deleted; normal upload storage was not used for destructive
+  checks. Map tiles were mocked and temporary screenshots visually inspected;
+  no human verification, scaling results, final screenshot or publishing claimed.

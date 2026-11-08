@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
 from app.datasets import MAX_REQUEST_BYTES, configure_uploads, lookup_dataset, router as datasets_router
+from app.dataset_lifecycle import DatasetLifecycle
 from app.ingestion import load_dataset
 from app.replay_socket import stream_replay
 from app.track_store import MemoryTrackStore, ParquetTrackStore
@@ -31,8 +32,12 @@ def create_app(
         path = dataset_path if dataset_path is not None else Path(os.environ.get("TRACKS_CSV", DEFAULT_CSV))
         application.state.dataset = load_dataset(path)
         configure_uploads(application)
-        yield
-        del application.state.dataset
+        application.state.dataset_lifecycle = DatasetLifecycle()
+        try:
+            yield
+        finally:
+            await application.state.dataset_lifecycle.finish_pending()
+            del application.state.dataset
 
     application = FastAPI(title="Kappal Rewind", lifespan=lifespan)
     application.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
@@ -56,22 +61,30 @@ def create_app(
 
     @application.websocket("/ws/replay")
     async def replay(websocket: WebSocket, dataset_id: str = "builtin"):
+        lifecycle = websocket.app.state.dataset_lifecycle
+        acquired = False
         try:
-            store = await run_in_threadpool(select_track_store, websocket.app, dataset_id)
-        except Exception as error:
-            message = error.detail if isinstance(error, HTTPException) else "Recording could not be opened. Choose another recording."
-            await websocket.accept()
             try:
-                await asyncio.wait_for(websocket.send_json({"type": "error", "message": message}), timeout=5)
-            except (WebSocketDisconnect, OSError, TimeoutError):
-                pass
-            finally:
+                lifecycle.acquire(dataset_id)
+                acquired = True
+                store = await run_in_threadpool(select_track_store, websocket.app, dataset_id)
+            except Exception as error:
+                message = error.detail if isinstance(error, HTTPException) else "Recording could not be opened. Choose another recording."
+                await websocket.accept()
                 try:
-                    await asyncio.wait_for(websocket.close(code=1008), timeout=1)
-                except (WebSocketDisconnect, OSError, RuntimeError, TimeoutError):
+                    await asyncio.wait_for(websocket.send_json({"type": "error", "message": message}), timeout=5)
+                except (WebSocketDisconnect, OSError, TimeoutError):
                     pass
-            return
-        await stream_replay(websocket, store, replay_clock)
+                finally:
+                    try:
+                        await asyncio.wait_for(websocket.close(code=1008), timeout=1)
+                    except (WebSocketDisconnect, OSError, RuntimeError, TimeoutError):
+                        pass
+                return
+            await stream_replay(websocket, store, replay_clock)
+        finally:
+            if acquired:
+                lifecycle.release(dataset_id)
 
     @application.get("/api/replay/{dataset_id}/meta")
     def replay_metadata(dataset_id: str, request: Request):
