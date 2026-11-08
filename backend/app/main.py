@@ -13,6 +13,7 @@ from app.datasets import MAX_REQUEST_BYTES, configure_uploads, lookup_dataset, r
 from app.dataset_lifecycle import DatasetLifecycle
 from app.ingestion import load_dataset
 from app.replay_socket import stream_replay
+from app.routes import RouteCache
 from app.track_store import MemoryTrackStore, ParquetTrackStore
 
 DEFAULT_CSV = Path(__file__).resolve().parents[2] / "data/tracks.csv"
@@ -33,6 +34,7 @@ def create_app(
         application.state.dataset = load_dataset(path)
         configure_uploads(application)
         application.state.dataset_lifecycle = DatasetLifecycle()
+        application.state.route_cache = RouteCache()
         try:
             yield
         finally:
@@ -95,6 +97,27 @@ def create_app(
             raise
         except Exception as error:
             raise HTTPException(500, "Recording could not be opened. Stored files were not changed.") from error
+
+    @application.get("/api/datasets/{dataset_id}/route")
+    async def vessel_route(dataset_id: str, vessel_id: str, request: Request):
+        lifecycle = request.app.state.dataset_lifecycle
+        lifecycle.acquire(dataset_id)
+        task = asyncio.create_task(run_in_threadpool(request.app.state.route_cache.get, request.app, dataset_id, vessel_id))
+        lifecycle.pending.add(task)
+        def finished(completed):
+            lifecycle.release(dataset_id)
+            lifecycle.pending.discard(completed)
+            if not completed.cancelled():
+                completed.exception()
+        task.add_done_callback(finished)
+        try:
+            # A cancelled HTTP coroutine must not release the file reservation
+            # while its thread is still querying; shutdown waits via pending.
+            return await asyncio.shield(task)
+        except HTTPException:
+            raise
+        except Exception as error:
+            raise HTTPException(500, "Full route could not be read. Stored observations were not changed.") from error
 
     return application
 

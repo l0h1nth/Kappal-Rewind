@@ -14,7 +14,7 @@ for (const speed of [0, 1, 5, 10]) {
     const marker = page.getByTitle('Vessel T007');
     await marker.scrollIntoViewIfNeeded();
     const oldMarker = await marker.elementHandle();
-    const box = (await marker.locator('path').boundingBox())!;
+    const box = (await marker.locator('.ship-hull').boundingBox())!;
     // Painted hull, not an empty corner; no locator.click retries or event dispatch.
     const x = box.x + box.width / 2, y = box.y + box.height / 2;
     await page.mouse.move(x, y);

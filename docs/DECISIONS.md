@@ -196,3 +196,7 @@
   persistent connections or protocol deltas add lifecycle/memory/compatibility cost
   without evidence needed here. Oversized windows return complete but uncached;
   per-client frame memory and snapshot bandwidth remain. Architecture is unchanged.
+
+## Exact, bounded selected-vessel route inspection
+- **Decision:** keep full routes out of replay frames; query one vessel on demand and preserve exact coordinates, splitting missing seconds, >100m steps and date-line crossings. Reject beyond 20,000 positions or 512 segments; cache eight routes per process/browser. The 100m rule is a conservative visualization guard, not GPS validation.
+- **Reason/tradeoff:** explicit limits avoid unbounded JSON/Leaflet layers without a geospatial framework or shape-loss claims. Simplification is deferred; larger/fragmented routes remain unavailable while replay works. Selected-only DuckDB projection/predicate/limit bounds Python rows, not Parquet scan cost or total RSS. Cached geometry/file reservations do not survive server restart.

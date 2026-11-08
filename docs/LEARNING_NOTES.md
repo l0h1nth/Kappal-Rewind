@@ -358,3 +358,10 @@ be different state transitions?
 - CSS tokens centralize color, spacing and type. Grid gives the map roughly two thirds of desktop space; Flexbox wraps controls. Smaller screens stack map, playback and information instead of shrinking text.
 - Hidden mounted views retain React/map identity and import/session state. Leaflet must wait for positive container dimensions before fitting recording bounds; ordinary navigation must preserve user pan/zoom.
 - Accessible autocomplete keeps bounded options and keyboard focus; real table headers/caption explain normalized preview values. Visible focus rings and contrasting input boundaries matter alongside readable text. Local OFL fonts avoid runtime font services; system fallbacks remain available.
+
+## Ship and route visualization
+
+- SVG hull/deck paths rotate inside the stable Leaflet marker; 0° points north. Leaflet retains its outer positioning transform and motion refs. Polyline/CircleMarker classes must be creation props; pathOptions updates styles but cannot reliably initialize a class after first production mount.
+- Dashed full routes include future recorded fixes; solid 60-second trails remain server replay history. Neither changes recorded coordinates. Exact segments split gaps/jumps before rendering; this version uses explicit rejection bounds instead of geometric simplification, preserving all accepted-route endpoints and shape.
+- Route effects depend on dataset/vessel/toggle, never frames. AbortController plus identity guards prevent stale responses; eight-entry caches bound retention. HTTP cancellation does not stop a worker query, so its deletion reservation lasts until completion. Interview question: why can cancelling fetch be insufficient to release a backend file safely?
+- References: [Leaflet paths/markers](https://leafletjs.com/reference.html), [AbortController](https://developer.mozilla.org/en-US/docs/Web/API/AbortController).

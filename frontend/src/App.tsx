@@ -6,6 +6,7 @@ import { RecordingInfo } from './components/RecordingInfo';
 import { UploadCsv } from './components/UploadCsv';
 import { DatasetLibrary } from './components/DatasetLibrary';
 import { istTime, recordingDuration } from './format';
+import { useVesselRoute } from './hooks/useVesselRoute';
 import { useReplaySocket } from './hooks/useReplaySocket';
 import { parseMetadata, type Metadata } from './types';
 
@@ -79,6 +80,7 @@ export function App() {
     const vessel = frame?.vessels.find(vessel => vessel.id === id);
     setSearchFocus(vessel && recording ? { datasetId: recording.id, lat: vessel.lat, lon: vessel.lon } : null);
   }
+  const vesselRoute = useVesselRoute(recording?.id ?? 'empty', selected);
   const selectedPresent = frame?.vessels.some(vessel => vessel.id === selected);
   const activeMetadata = recording ? metadata : null;
 
@@ -129,7 +131,7 @@ export function App() {
         <div className="replay-stage">
           <section className="map-card" aria-label="Recording map">
             <div className="map-card-heading"><h3>Vessel positions</h3><span>{frame ? `${frame.vessels.length} currently observed` : 'Waiting for observations'}</span></div>
-            {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording?.id ?? 'empty'} motionEnabled={!busy} motionEpoch={motionEpoch} searchFocus={searchFocus} /> :
+            {metadata ? <VesselMap metadata={metadata} frame={frame} selected={selected} onSelect={setSelected} datasetId={recording?.id ?? 'empty'} motionEnabled={!busy} motionEpoch={motionEpoch} searchFocus={searchFocus} fullRoute={vesselRoute.data} /> :
               <div className="map-placeholder">{metadataError ? <div role="alert"><p>{metadataError}</p><button onClick={() => setMetadataAttempt(value => value + 1)}>Retry metadata</button></div> : <p role="status">Loading dataset bounds…</p>}</div>}
             {!recording && <div className="empty-workspace" role="status"><strong>No recording loaded.</strong><span>Choose a recording to start replay.</span><button onClick={() => setTab('recordings')}>Choose recording</button></div>}
             <p className="map-card-note">Recorded GPS positions <span>Trails show the last 60 seconds</span></p>
@@ -137,7 +139,7 @@ export function App() {
         </div>
         <Timeline key={recording?.id ?? 'empty'} frame={frame} metadata={activeMetadata} connected={!!recording && status === 'connected'} busy={busy} send={send} />
         <aside className="workspace-sidebar" aria-label="Vessel information">
-          <VesselPanel vesselIds={activeMetadata?.vessel_ids ?? []} datasetId={recording?.id ?? 'empty'} onSelect={selectFromSearch} selected={selected} frame={frame} connected={status === 'connected'} />
+          <VesselPanel vesselIds={activeMetadata?.vessel_ids ?? []} datasetId={recording?.id ?? 'empty'} onSelect={selectFromSearch} selected={selected} frame={frame} connected={status === 'connected'} route={vesselRoute} />
           {activeMetadata && recording && <RecordingInfo key={`info:${recording.id}`} datasetId={recording.id} name={recording.name} metadata={activeMetadata} />}
         </aside>
       </div>

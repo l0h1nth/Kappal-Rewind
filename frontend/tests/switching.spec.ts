@@ -255,3 +255,24 @@ test('uploaded metadata completing in Recordings waits for a visible map before 
   }).toBe(true);
   expect(server.builtin.errors).toEqual([]);
 });
+
+test('full route resets on dataset switch and late builtin routes cannot reappear', async ({ page }) => {
+  await prepare(page);let release!:()=>void;let arrived!:()=>void;
+  const gate=new Promise<void>(r=>release=r),waiting=new Promise<void>(r=>arrived=r);
+  await page.route('**/api/datasets/*/route?*',async r=>{
+    const dataset=new URL(r.request().url()).pathname.split('/')[3];
+    if(dataset==='builtin'){arrived();await gate;}
+    await r.fulfill({json:{dataset_id:dataset,vessel_id:dataset==='builtin'?'T007':'LONDON',start:meta(A).start,end:meta(A).end,
+      point_count:2,max_points:20000,simplified:false,segments:[[[51.5,-.1],[51.5001,-.1]]]}}).catch(()=>{});
+  });
+  const input=page.getByRole('combobox',{name:'Search vessel ID'});
+  await input.fill('t007');await page.getByRole('option',{name:/T007/}).click();
+  await page.getByRole('checkbox',{name:'Show full route'}).check();await waiting;
+  await choose(page,A);await loaded(page,A);release();
+  await expect(page.locator('path.vessel-full-route')).toHaveCount(0);
+  await page.getByTitle('Vessel LONDON',{exact:true}).click();
+  await expect(page.getByRole('checkbox',{name:'Show full route'})).not.toBeChecked();
+  await page.getByRole('checkbox',{name:'Show full route'}).check();await expect(page.locator('path.vessel-full-route')).toHaveCount(1);
+  await builtin(page);await expect(page.getByTitle('Vessel T007')).toBeVisible();
+  await expect(page.locator('path.vessel-full-route')).toHaveCount(0);
+});

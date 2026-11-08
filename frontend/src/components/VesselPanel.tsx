@@ -1,9 +1,10 @@
+import type { RouteControl } from '../hooks/useVesselRoute';
 import { VesselSearch } from './VesselSearch';
 import { istTime } from '../format';
 import type { ReplayFrame } from '../types';
 
-export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, onSelect }: {
-  vesselIds: string[]; datasetId: string; onSelect: (id: string) => void;
+export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, onSelect, route }: {
+  route: RouteControl; vesselIds: string[]; datasetId: string; onSelect: (id: string) => void;
   selected: string | null; frame: ReplayFrame | null; connected: boolean;
 }) {
   const vessel = frame?.vessels.find(vessel => vessel.id === selected);
@@ -27,6 +28,14 @@ export function VesselPanel({ selected, frame, connected, vesselIds, datasetId, 
             <dd><time dateTime={frame.timestamp}>{istTime(frame.timestamp)}</time></dd></div>
         </dl>
       </>}
+    {selected && <div className="route-control">
+      <label><input type="checkbox" checked={route.enabled} onChange={event => route.setEnabled(event.target.checked)} />Show full route</label>
+      <p>Preview this vessel's complete recorded journey.</p>
+      <p>Includes observations after the current replay time. Dashed blue route; solid vessel-colored recent trail.</p>
+      {route.enabled && route.status === 'loading' && <p role="status">Loading full route…</p>}
+      {route.enabled && route.status === 'error' && <div role="alert"><p>{route.error}</p><button onClick={route.retry}>Retry route</button></div>}
+      {route.data && <p role="status">{route.data.point_count.toLocaleString('en-US')} recorded positions · {route.data.segments.length} separate segments. Gaps and sudden jumps stay disconnected.</p>}
+    </div>}
     </section>
   </aside>;
 }

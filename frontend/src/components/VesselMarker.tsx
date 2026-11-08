@@ -21,7 +21,7 @@ export function VesselMarker({ vessel, selected, onSelect, frame, motionEnabled,
     iconSize: [32, 32], iconAnchor: [16, 16],
     // Leaflet owns the outer positioning transform. Rotate only this inner glyph.
     html: `<span class="vessel-glyph" style="color:${color};transform:rotate(${vessel.heading}deg)">
-      <svg viewBox="0 0 24 30" width="22" height="28" aria-hidden="true"><path d="M12 2 21 25 12 20 3 25Z"/></svg></span>`,
+      <svg class="ship-icon" viewBox="0 0 24 32" width="22" height="30" aria-hidden="true"><path class="ship-hull" d="M12 1C9 4 4 10 4 16L5 28Q12 31 19 28L20 16C20 10 15 4 12 1Z"/><path class="ship-deck" d="M9 12H15V22H9Z M9 25H15"/></svg></span>`,
   }), [vessel.heading, color, selected]);
   const events = useMemo(() => ({
     click: () => onSelect(vessel.id),

@@ -187,3 +187,11 @@ disk growth remain bottlenecks; large single-vessel success does not benchmark
 those distributions. No partitioning, background queue or month-scale experiment. Frontend restart-on-failure
 recovers a transient Docker DNS miss when services restart in parallel; normal
 Compose startup still waits for backend health.
+
+## Selected-vessel full route
+
+`GET /api/datasets/{dataset_id}/route?vessel_id=ID` supports `builtin` and trusted uploaded IDs. The query parameter supports the same printable, non-whitespace vessel IDs as ingestion, including encoded slashes/Unicode. Unknown dataset/vessel: 404; malformed ID: 422.
+
+Returns dataset/vessel identity, UTC start/end, point count, `simplified: false` and chronological `[lat,lon]` segments. Gaps, >100m consecutive steps and date-line crossings split segments; singleton fixes remain dots. This inspection includes observations after replay time and never replaces recent trails or stored values.
+
+Routes over **20,000 positions or 512 segments** return an explanatory 422, never partial geometry. No simplification is performed. Eight-entry server/browser caches avoid repeat reads; uploads are resolved through the catalog before cache hits. DuckDB queries only the requested vessel/columns with LIMIT 20,001, one thread and 128MB engine budget; scans, serialization and process RSS are not separately capped. In-flight reads retain deletion protection until their worker finishes, including HTTP cancellation. No new service or persistent route file.

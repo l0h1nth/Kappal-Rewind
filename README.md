@@ -2,7 +2,7 @@
 *The sea has a replay button.*
 
 A vessel-track replay tool for the RSKD Labs internship assignment.
-**Status: Coastal Editorial redesign reviewed** — interactive Leaflet map, directional markers, gap-split trails,
+**Status: Coastal Editorial redesign reviewed** — interactive Leaflet map, heading-rotated ship markers, gap-split trails,
 server-controlled timeline, Play/Pause/Reset, 1×/2×/5×/10× speeds and current vessel
 details. Final verification/submission preparation remain for Phase 7. See the [plan](PLAN.md).
 
@@ -45,6 +45,8 @@ with disk-backed normalization. Deleting a loaded upload closes this tab’s rep
 other active clients block deletion. Run one backend worker. Upload feedback distinguishes transfer
 from processing; expand About this recording in Replay for counts and times.
 Replay and Recordings have separate responsive views with a readable observation-preview table.
+Selected-vessel **Show full route** previews the complete journey, including future fixes; gaps stay split.
+Exact routes are limited to 20,000 positions/512 segments; larger routes report an error, while replay remains available.
 Limits, recovery and APIs: [recordings](docs/DATASETS.md).
 
 ## Data problems found
